@@ -4,7 +4,7 @@
 
 [project]
 name = "wled-matrix-display"
-version = "1.0.0"
+version = "1.0.1"
 description = "Home-Assistant-Blueprint für eine WLED-Matrix als Info-Anzeige"
 readme = "README.md"
 requires-python = ">=3.11"
