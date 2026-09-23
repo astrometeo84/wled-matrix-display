@@ -1,0 +1,80 @@
+# Zwei Automationen aus dem Blueprint: einmal minimal, einmal alles ausgefüllt.
+# Home Assistant prüft damit, ob die Eingaben zu den Selektoren passen.
+
+- id: minimal
+  alias: "Test – nur Pflichtfelder"
+  use_blueprint:
+    path: wled_matrix/wled_matrix_display.yaml
+    input:
+      wled_light: light.testmatrix
+
+- id: vollstaendig
+  alias: "Test – alle Eingaben belegt"
+  use_blueprint:
+    path: wled_matrix/wled_matrix_display.yaml
+    input:
+      wled_light: light.testmatrix
+      wled_host: "192.168.1.50"
+      effect_id: 122
+
+      show_time: true
+      time_color: [0, 255, 150]
+      time_font: ""
+      show_date: true
+      date_color: [255, 255, 255]
+      date_font: "5x8"
+      temp_sensor: sensor.testtemperatur
+      temp_unit: "C"
+      temp_scale:
+        - {ab: -99, farbe: [140, 80, 255]}
+        - {ab: 0, farbe: [0, 200, 255]}
+        - {ab: 25, farbe: [255, 120, 0]}
+        - {ab: 30, farbe: [255, 30, 0]}
+      temp_font: "4x6"
+      pv_sensor: sensor.testpv
+      pv_only_when_producing: true
+      pv_color_low: [255, 60, 0]
+      pv_color_mid: [255, 200, 0]
+      pv_color_high: [0, 255, 0]
+      pv_threshold_mid: 500
+      pv_threshold_high: 2000
+      pv_font: "6x8"
+      hp_sensor: sensor.testwp
+      hp_only_when_running: true
+      hp_invert: true
+      hp_threshold_idle: 100
+      hp_threshold_mid: 800
+      hp_threshold_high: 2000
+      hp_color_idle: [60, 120, 200]
+      hp_color_low: [0, 255, 80]
+      hp_color_mid: [255, 200, 0]
+      hp_color_high: [255, 60, 0]
+      hp_font: ""
+      window_sensors:
+        - binary_sensor.testfenster
+      window_only_when_open: true
+      window_color: [255, 80, 80]
+      window_font: "5x8"
+      custom_apps:
+        - text: "Eigene App"
+          color: [255, 255, 0]
+          show: "{{ true }}"
+
+      interval: "/15"
+      font: "5x8"
+      speed: 128
+      brightness: 128
+      y_offset: 128
+      active_from: "06:00:00"
+      active_to: "23:00:00"
+
+      notify_event: wled_matrix_notify
+      notify_default_color: [255, 255, 255]
+      notify_default_duration: 15
+      notify_text_helper: input_text.matrix_nachricht
+
+      presence_sensor: binary_sensor.testpraesenz
+      off_delay: 5
+      power_switch: input_boolean.matrix_strom
+      power_off_delay: 60
+      boot_timeout: 90

@@ -1,0 +1,43 @@
+name: Fehler melden
+description: Etwas funktioniert nicht wie beschrieben
+labels: [bug]
+body:
+  - type: textarea
+    id: was
+    attributes:
+      label: Was passiert?
+      description: Und was hattest du stattdessen erwartet?
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home-Assistant-Version
+      placeholder: "2026.9.1"
+    validations:
+      required: true
+  - type: input
+    id: wled
+    attributes:
+      label: WLED-Version
+      placeholder: "0.15.0"
+    validations:
+      required: true
+  - type: input
+    id: matrix
+    attributes:
+      label: Größe der Matrix
+      placeholder: "64x8"
+  - type: input
+    id: blueprint
+    attributes:
+      label: Blueprint-Version
+      description: Steht im Kopf der Blueprint-Datei als "# Version:"
+      placeholder: "1.0.0"
+  - type: textarea
+    id: trace
+    attributes:
+      label: Trace der Automation
+      description: >
+        Automation → drei Punkte → Traces → Download. Hilft am meisten.
+      render: text

@@ -1,0 +1,61 @@
+name: Validierung
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  yamllint:
+    name: YAML-Stil
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yamllint
+      - run: yamllint --strict .
+
+  tests:
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -v
+
+  home-assistant:
+    name: Home Assistant lädt den Blueprint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Eine vollständige HA-Konfiguration bauen, die den Blueprint benutzt.
+      # Damit prüft Home Assistant selbst, ob Aufbau, Selektoren und
+      # Vorlagen gültig sind – der aussagekräftigste Test im Repo.
+      - name: Test-Konfiguration erzeugen
+        run: |
+          mkdir -p ha/blueprints/automation/wled_matrix
+          cp blueprints/automation/wled_matrix/*.yaml ha/blueprints/automation/wled_matrix/
+          cp tests/fixtures/configuration.yaml ha/configuration.yaml
+          cp tests/fixtures/automations.yaml ha/automations.yaml
+
+      - name: Konfiguration prüfen
+        uses: frenck/action-home-assistant@v1
+        with:
+          path: ./ha
+          secrets: ./tests/fixtures/secrets.yaml
+          version: stable

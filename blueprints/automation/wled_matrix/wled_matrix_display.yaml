@@ -1,0 +1,1020 @@
+# WLED Matrix Display – Alles-in-einem-Blueprint für Home Assistant
+# Version: 1.0.0
+# https://github.com/BENUTZER/REPO
+#
+# Die Version wird beim Release gegen den Git-Tag geprüft
+# (scripts/check_version.py). Beide müssen übereinstimmen.
+
+blueprint:
+  name: WLED Matrix – Alles-in-einem (Apps, Nachrichten, Anwesenheit)
+  description: >
+    Macht aus einer WLED-Matrix eine Info-Anzeige wie die Ulanzi/Awtrix-Uhr – mit einem
+    einzigen Blueprint und ohne weitere Skripte.
+
+    Enthalten:
+    • APPS: Uhrzeit (Pflicht) und optional Datum, Außentemperatur, PV-Leistung,
+      Wärmepumpen-Verbrauch und Anzahl offener Fenster. Jede App wird aktiv, sobald
+      die passende Entität ausgewählt ist. Dazu beliebige eigene Apps als YAML-Liste.
+    • NACHRICHTEN: Benachrichtigungen unterbrechen die Rotation und danach läuft sie weiter.
+      Ausgelöst über das Event "wled_matrix_notify" oder ein Text-Eingabefeld.
+    • ANWESENHEIT: Anzeige aus bei leerem Raum, optional Stromtrennung zum Schonen der LEDs,
+      bei Rückkehr automatisch wieder an.
+
+    Voraussetzung: rest_command "wled_matrix_json" in der configuration.yaml (siehe README).
+
+  domain: automation
+  homeassistant:
+    min_version: 2024.6.0
+
+  input:
+
+    # ------------------------------------------------------------------
+    basis:
+      name: "Grundeinstellungen"
+      icon: mdi:led-strip-variant
+      collapsed: false
+      input:
+        wled_light:
+          name: WLED-Matrix
+          description: Die Licht-Entität der Matrix aus der offiziellen WLED-Integration.
+          selector:
+            entity:
+              filter:
+                - integration: wled
+                  domain: light
+        wled_host:
+          name: IP-Adresse oder Hostname (optional)
+          description: >
+            Leer lassen – die Adresse wird automatisch aus der WLED-Integration gelesen.
+            Nur eintragen, wenn das nicht klappt, z. B. 192.168.1.50
+          default: ""
+          selector:
+            text:
+        effect_id:
+          name: Effekt-ID "Scrolling Text"
+          description: >
+            Die Nummer des Lauftext-Effekts in deiner WLED-Version. 122 passt bei
+            den meisten. Stimmt sie nicht, läuft ein anderer Effekt – die richtige
+            Zahl steht in http://IP-DER-MATRIX/json/eff, dort ab 0 abzählen.
+            0 bedeutet: Effekt nicht umschalten. Dann stellst du "Scrolling Text"
+            einmal in WLED selbst ein und der Blueprint ändert nur noch den Text.
+          default: 122
+          selector:
+            number:
+              min: 0
+              max: 255
+              mode: box
+
+    # ------------------------------------------------------------------
+    app_uhrzeit:
+      name: "App – Uhrzeit"
+      icon: mdi:clock-outline
+      collapsed: false
+      input:
+        show_time:
+          name: Uhrzeit anzeigen
+          description: Die Uhr ist die Grundanzeige und sollte aktiviert bleiben.
+          default: true
+          selector:
+            boolean:
+        time_color:
+          name: Farbe Uhrzeit
+          default: [0, 255, 150]
+          selector:
+            color_rgb:
+        time_font:
+          name: Schrift Uhrzeit
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_datum:
+      name: "App – Datum (optional)"
+      icon: mdi:calendar
+      collapsed: true
+      input:
+        show_date:
+          name: Datum anzeigen
+          default: false
+          selector:
+            boolean:
+        date_color:
+          name: Farbe Datum
+          default: [255, 255, 255]
+          selector:
+            color_rgb:
+        date_font:
+          name: Schrift Datum
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_temperatur:
+      name: "App – Außentemperatur (optional)"
+      icon: mdi:thermometer
+      collapsed: true
+      input:
+        temp_sensor:
+          name: Außentemperatur (optional)
+          description: Sensor mit der Außentemperatur. Leer lassen, um die App zu deaktivieren.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        temp_unit:
+          name: Einheit Außentemperatur
+          description: >
+            Wird direkt an den Wert gehängt, ergibt also zum Beispiel "7.3C".
+            Das Gradzeichen ° fehlt in den eingebauten WLED-Schriften und wird
+            nicht dargestellt – deshalb hier nur "C". Andere Möglichkeiten sind
+            " C" mit Leerzeichen, " Grad" oder ein leeres Feld für die nackte Zahl.
+            Sollte deine WLED-Version eine Schrift mit Gradzeichen mitbringen,
+            kannst du hier "°C" eintragen.
+          default: "C"
+          selector:
+            text:
+        temp_scale:
+          name: Farbskala Außentemperatur
+          description: >
+            Liste von Stufen, jeweils "ab" (Temperatur in °C) und "farbe" ([R, G, B]).
+            Gilt die höchste Stufe, deren "ab" nicht über dem Messwert liegt.
+            Stufen lassen sich frei ergänzen oder entfernen; eine einzige Stufe
+            bedeutet eine feste Farbe. Die Benennungen folgen dem Deutschen
+            Wetterdienst: ab 25 °C Sommertag, ab 30 °C heißer Tag, ab 35 °C Wüstentag.
+          default:
+            - {ab: -99, farbe: [140, 80, 255]}    # strenger Frost
+            - {ab: -5, farbe: [60, 140, 255]}     # Frost
+            - {ab: 0, farbe: [0, 200, 255]}       # kühl
+            - {ab: 10, farbe: [0, 255, 120]}      # mild
+            - {ab: 20, farbe: [255, 200, 0]}      # warm
+            - {ab: 25, farbe: [255, 120, 0]}      # Sommertag
+            - {ab: 30, farbe: [255, 30, 0]}       # heißer Tag
+            - {ab: 35, farbe: [255, 0, 110]}      # Wüstentag
+          selector:
+            object:
+        temp_font:
+          name: Schrift Außentemperatur
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_pv:
+      name: "App – PV-Leistung (optional)"
+      icon: mdi:solar-power-variant
+      collapsed: true
+      input:
+        pv_sensor:
+          name: PV-Leistung (optional)
+          description: >
+            Sensor mit der aktuellen PV-Leistung. Die Einheit (W oder kW) wird automatisch
+            erkannt. Leer lassen, um die App zu deaktivieren.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        pv_only_when_producing:
+          name: PV nur anzeigen, wenn Ertrag vorhanden
+          description: >
+            Blendet die App aus, solange die Leistung bei 0 oder darunter liegt,
+            also nachts. Erscheint die App tagsüber nicht, prüfe den Sensorwert
+            in den Entwicklerwerkzeugen – manche Wechselrichter liefern nachts
+            kleine negative Werte.
+          default: true
+          selector:
+            boolean:
+        pv_threshold_mid:
+          name: PV-Schwelle mittel
+          description: Ab hier gilt die mittlere Farbe. Passe das an deine Anlagengröße an.
+          default: 500
+          selector:
+            number: {min: 0, max: 50000, step: 50, unit_of_measurement: W, mode: box}
+        pv_threshold_high:
+          name: PV-Schwelle hoch
+          default: 2000
+          selector:
+            number: {min: 0, max: 50000, step: 50, unit_of_measurement: W, mode: box}
+        pv_color_low:
+          name: PV-Farbe niedrig
+          default: [255, 60, 0]
+          selector:
+            color_rgb:
+        pv_color_mid:
+          name: PV-Farbe mittel
+          default: [255, 200, 0]
+          selector:
+            color_rgb:
+        pv_color_high:
+          name: PV-Farbe hoch
+          default: [0, 255, 0]
+          selector:
+            color_rgb:
+        pv_font:
+          name: Schrift PV-Leistung
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_waermepumpe:
+      name: "App – Wärmepumpe (optional)"
+      icon: mdi:heat-pump-outline
+      collapsed: true
+      input:
+        hp_sensor:
+          name: Wärmepumpen-Verbrauch (optional)
+          description: >
+            Sensor mit der aktuellen Leistungsaufnahme. W und kW werden
+            automatisch erkannt. Leer lassen, um die App zu deaktivieren.
+            Beachte danach die beiden Felder "Vorzeichen umkehren" und
+            "nur anzeigen, wenn sie läuft" – erscheint die App nicht,
+            liegt es fast immer an einem der beiden.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        hp_invert:
+          name: Vorzeichen umkehren
+          description: >
+            Nur einschalten, wenn dein Sensor den Verbrauch als NEGATIVE Zahl
+            liefert. So findest du es heraus: Entwicklerwerkzeuge → Zustände,
+            den Sensor suchen und den Wert anschauen, während die Wärmepumpe
+            läuft. Steht dort etwa -800, schalte das hier ein. Steht dort 800,
+            lass es aus – sonst wird der Wert negativ und die App verschwindet.
+          default: false
+          selector:
+            boolean:
+        hp_only_when_running:
+          name: Wärmepumpe nur anzeigen, wenn sie läuft
+          description: >
+            Blendet die App aus, solange der Verbrauch unter der
+            Bereitschafts-Schwelle liegt.
+            ERSCHEINT DIE APP NICHT? Das ist meist der Grund. Eine ruhende
+            Wärmepumpe zieht oft nur 20 bis 50 W für die Steuerung, das liegt
+            unter den 100 W der Schwelle. Zum Prüfen diesen Schalter kurz
+            ausschalten: Dann muss der aktuelle Wert in Blau erscheinen.
+          default: true
+          selector:
+            boolean:
+        hp_threshold_idle:
+          name: WP-Schwelle Bereitschaft
+          description: >
+            Darunter gilt die Anlage als aus. Sie wird dann in der Farbe für
+            Bereitschaft angezeigt – oder ganz ausgeblendet, wenn oben
+            "nur anzeigen, wenn sie läuft" aktiv ist.
+            100 W passt für die meisten Anlagen; die reine Steuerung braucht
+            typischerweise 20 bis 50 W.
+          default: 100
+          selector:
+            number: {min: 0, max: 50000, step: 10, unit_of_measurement: W, mode: box}
+        hp_threshold_mid:
+          name: WP-Schwelle hohe Last
+          default: 800
+          selector:
+            number: {min: 0, max: 50000, step: 50, unit_of_measurement: W, mode: box}
+        hp_threshold_high:
+          name: WP-Schwelle Heizstab
+          description: Darüber läuft meist der Heizstab oder ein Abtauvorgang.
+          default: 2000
+          selector:
+            number: {min: 0, max: 50000, step: 50, unit_of_measurement: W, mode: box}
+        hp_color_idle:
+          name: WP-Farbe Bereitschaft
+          default: [60, 120, 200]
+          selector:
+            color_rgb:
+        hp_color_low:
+          name: WP-Farbe normaler Betrieb
+          default: [0, 255, 80]
+          selector:
+            color_rgb:
+        hp_color_mid:
+          name: WP-Farbe hohe Last
+          default: [255, 200, 0]
+          selector:
+            color_rgb:
+        hp_color_high:
+          name: WP-Farbe Heizstab
+          default: [255, 60, 0]
+          selector:
+            color_rgb:
+        hp_font:
+          name: Schrift Wärmepumpe
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_fenster:
+      name: "App – Offene Fenster (optional)"
+      icon: mdi:window-open-variant
+      collapsed: true
+      input:
+        window_sensors:
+          name: Fenster-Kontakte (optional)
+          description: >
+            Mehrere Fenster-/Tür-Kontakte auswählen. Angezeigt wird die Anzahl der offenen.
+            Leer lassen, um die App zu deaktivieren.
+          default: []
+          selector:
+            entity:
+              multiple: true
+              filter:
+                - domain: binary_sensor
+        window_only_when_open:
+          name: Fenster nur anzeigen, wenn eines offen ist
+          default: true
+          selector:
+            boolean:
+        window_color:
+          name: Farbe Fenster
+          default: [255, 80, 80]
+          selector:
+            color_rgb:
+        window_font:
+          name: Schrift Fenster
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
+    app_eigene:
+      name: "App – Eigene Anzeigen (optional)"
+      icon: mdi:playlist-plus
+      collapsed: true
+      input:
+        custom_apps:
+          name: Eigene Apps (optional)
+          description: >
+            Weitere Anzeigen als YAML-Liste. Pflicht ist nur "text", optional sind
+            color, gradient, color2, font (4x6/5x8/6x8), speed, y_offset, brightness,
+            reverse, trail und show (Bedingung als Template).
+            Beispiel:
+            - text: "{{ states('sensor.strompreis') }}ct"
+              color: [255, 255, 0]
+              show: "{{ states('sensor.strompreis') | float(0) > 0 }}"
+          default: []
+          selector:
+            object:
+
+    # ------------------------------------------------------------------
+    darstellung:
+      name: "Darstellung"
+      icon: mdi:format-text
+      collapsed: true
+      input:
+        interval:
+          name: App-Wechsel alle
+          default: "/15"
+          selector:
+            select:
+              options:
+                - label: "10 Sekunden"
+                  value: "/10"
+                - label: "15 Sekunden"
+                  value: "/15"
+                - label: "20 Sekunden"
+                  value: "/20"
+                - label: "30 Sekunden"
+                  value: "/30"
+                - label: "60 Sekunden"
+                  value: "0"
+        font:
+          name: Schrift (Standard für alle Apps)
+          description: >
+            Gilt für jede App, deren eigenes Schriftfeld auf "wie eingestellt" steht.
+            Die Zahl in Klammern ist der Wert, den WLED im Schieberegler für die
+            Schriftgröße anzeigt. Bei 8 Pixeln Höhe passen nur diese drei.
+          default: "6x8"
+          selector:
+            select:
+              options:
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+        speed:
+          name: Scroll-Geschwindigkeit
+          default: 128
+          selector:
+            number:
+              min: 0
+              max: 255
+        brightness:
+          name: Helligkeit
+          default: 128
+          selector:
+            number:
+              min: 1
+              max: 255
+        y_offset:
+          name: Vertikale Position (128 = Mitte)
+          default: 128
+          selector:
+            number:
+              min: 0
+              max: 255
+        active_from:
+          name: Aktiv ab
+          default: "00:00:00"
+          selector:
+            time:
+        active_to:
+          name: Aktiv bis
+          default: "23:59:59"
+          selector:
+            time:
+
+    # ------------------------------------------------------------------
+    nachrichten:
+      name: "Nachrichten"
+      icon: mdi:message-text-outline
+      collapsed: true
+      input:
+        notify_event:
+          name: Event-Name für Benachrichtigungen
+          description: >
+            Andere Automationen lösen Nachrichten über dieses Event aus, z. B.:
+            action: event.fire / event_type: wled_matrix_notify
+            mit data: text, color, duration
+          default: wled_matrix_notify
+          selector:
+            text:
+        notify_default_color:
+          name: Standardfarbe für Nachrichten
+          default: [255, 255, 255]
+          selector:
+            color_rgb:
+        notify_default_duration:
+          name: Standarddauer für Nachrichten
+          default: 15
+          selector:
+            number:
+              min: 3
+              max: 600
+              unit_of_measurement: s
+        notify_text_helper:
+          name: Text-Eingabefeld (optional)
+          description: >
+            Ein input_text-Helfer. Was dort eingetragen wird, erscheint sofort auf der
+            Matrix und das Feld wird danach geleert. Praktisch fürs Dashboard.
+          # Leere Liste statt leerem Text: Diese Eingabe landet in einem Trigger,
+          # und ein leerer Text ist dort kein gültiges entity_id.
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: input_text
+
+    # ------------------------------------------------------------------
+    anwesenheit:
+      name: "Anwesenheit & Stromsparen"
+      icon: mdi:motion-sensor
+      collapsed: true
+      input:
+        presence_sensor:
+          name: Anwesenheitssensor (optional)
+          description: >
+            Binärsensor, der "an" ist, wenn jemand im Raum ist. Für mehrere Sensoren
+            eine Binärsensor-Gruppe (Helfer) anlegen. Leer lassen, um die Funktion
+            zu deaktivieren – die Matrix läuft dann durchgehend.
+          # Leere Liste statt leerem Text: Diese Eingabe landet in drei Triggern,
+          # und ein leerer Text ist dort kein gültiges entity_id.
+          default: []
+          selector:
+            entity:
+              filter:
+                - domain: binary_sensor
+        off_delay:
+          name: Anzeige aus nach
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 240
+              unit_of_measurement: min
+        power_switch:
+          name: Stromschalter (optional)
+          description: >
+            Steckdose oder Relais, das die Matrix mit Strom versorgt. Trennt den Strom
+            nach längerer Abwesenheit und schont so die LEDs.
+            Nicht die Matrix selbst auswählen!
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: switch
+                - domain: input_boolean
+        power_off_delay:
+          name: Strom trennen nach
+          description: Sollte deutlich länger sein als "Anzeige aus nach".
+          default: 60
+          selector:
+            number:
+              min: 5
+              max: 1440
+              unit_of_measurement: min
+        boot_timeout:
+          name: Max. Wartezeit nach dem Einschalten
+          default: 90
+          selector:
+            number:
+              min: 10
+              max: 600
+              unit_of_measurement: s
+
+mode: queued
+max: 30
+max_exceeded: silent
+
+# ====================================================================
+triggers:
+  - trigger: time_pattern
+    seconds: !input interval
+    id: rotation
+
+  - trigger: event
+    event_type: !input notify_event
+    id: nachricht
+
+  - trigger: state
+    entity_id: !input notify_text_helper
+    id: eingabefeld
+
+  - trigger: state
+    entity_id: !input presence_sensor
+    to: "on"
+    id: anwesend
+
+  - trigger: state
+    entity_id: !input presence_sensor
+    to: "off"
+    for:
+      minutes: !input off_delay
+    id: anzeige_aus
+
+  - trigger: state
+    entity_id: !input presence_sensor
+    to: "off"
+    for:
+      minutes: !input power_off_delay
+    id: strom_aus
+
+# ====================================================================
+variables:
+  light_entity: !input wled_light
+  host_input: !input wled_host
+  fx_id: !input effect_id
+
+  show_time: !input show_time
+  time_color: !input time_color
+  show_date: !input show_date
+  date_color: !input date_color
+  temp_sensor: !input temp_sensor
+  temp_scale: !input temp_scale
+  temp_unit: !input temp_unit
+  pv_sensor: !input pv_sensor
+  pv_only: !input pv_only_when_producing
+  pv_c_low: !input pv_color_low
+  pv_c_mid: !input pv_color_mid
+  pv_c_high: !input pv_color_high
+  pv_t_mid: !input pv_threshold_mid
+  pv_t_high: !input pv_threshold_high
+  hp_sensor: !input hp_sensor
+  hp_only: !input hp_only_when_running
+  hp_invert: !input hp_invert
+  hp_t_idle: !input hp_threshold_idle
+  hp_t_mid: !input hp_threshold_mid
+  hp_t_high: !input hp_threshold_high
+  hp_c_idle: !input hp_color_idle
+  hp_c_low: !input hp_color_low
+  hp_c_mid: !input hp_color_mid
+  hp_c_high: !input hp_color_high
+  window_sensors: !input window_sensors
+  window_only: !input window_only_when_open
+  window_color: !input window_color
+  custom_apps: !input custom_apps
+
+  pattern: !input interval
+  def_font: !input font
+  time_font: !input time_font
+  date_font: !input date_font
+  temp_font: !input temp_font
+  pv_font: !input pv_font
+  hp_font: !input hp_font
+  window_font: !input window_font
+  def_speed: !input speed
+  def_bri: !input brightness
+  def_y: !input y_offset
+
+  notify_color: !input notify_default_color
+  notify_duration: !input notify_default_duration
+
+  power_switch: !input power_switch
+  boot_timeout: !input boot_timeout
+
+  # ------------------------------------------------------------------
+  # Optionale Entitaeten: Der Standardwert ist eine leere Liste, weil ein
+  # leerer Text in einem Trigger kein gueltiges entity_id ist - Home
+  # Assistant weigert sich dann, die Automation ueberhaupt zu speichern
+  # ("Entity is neither a valid entity ID nor a valid UUID").
+  # Ist etwas ausgewaehlt, liefert der Selektor einen Text. Hier wird
+  # beides auf Text normalisiert, damit der Rest einfach auf '' pruefen
+  # kann.
+  # ------------------------------------------------------------------
+  text_helper_raw: !input notify_text_helper
+  presence_raw: !input presence_sensor
+  text_helper: "{{ text_helper_raw if text_helper_raw is string else '' }}"
+  presence: "{{ presence_raw if presence_raw is string else '' }}"
+
+  fonts: { "4x6": 0, "5x8": 64, "6x8": 128 }
+
+  # IP-Adresse: manuell oder aus der WLED-Integration
+  host: >
+    {% if host_input | string | length > 0 %}
+      {{ host_input | string | trim }}
+    {% else %}
+      {{ (device_attr(device_id(light_entity), 'configuration_url') or '')
+         | regex_replace('^https?://', '') | regex_replace('/+$', '') }}
+    {% endif %}
+
+  # Leistungswerte in Watt, egal ob der Sensor W oder kW liefert
+  pv_w: >
+    {% if pv_sensor == '' %}0{% else %}
+      {% set v = states(pv_sensor) | float(0) %}
+      {% set u = state_attr(pv_sensor, 'unit_of_measurement') | string | lower %}
+      {{ (v * 1000) if 'kw' in u else v }}
+    {% endif %}
+  # Der Sensor kann den Verbrauch als negative Zahl liefern. Das Vorzeichen
+  # wird hier gedreht, bevor Schwellen und Farben greifen - so rechnet der
+  # Rest des Blueprints immer mit positiven Watt.
+  hp_w: >
+    {% if hp_sensor == '' %}0{% else %}
+      {% set v = states(hp_sensor) | float(0) %}
+      {% set u = state_attr(hp_sensor, 'unit_of_measurement') | string | lower %}
+      {% set w = (v * 1000) if 'kw' in u else v %}
+      {{ (w * -1) if hp_invert else w }}
+    {% endif %}
+  windows_open: >
+    {{ window_sensors | select('is_state', 'on') | list | count }}
+
+  # Alle aktiven Apps zusammenstellen
+  apps: >
+    {% set ns = namespace(l=[]) %}
+
+    {% if show_time %}
+      {% set ns.l = ns.l + [dict(
+        {'text': '#TIME', 'color': time_color},
+        **({'font': time_font} if time_font else {}))] %}
+    {% endif %}
+
+    {% if show_date %}
+      {% set ns.l = ns.l + [dict(
+        {'text': '#DATE', 'color': date_color},
+        **({'font': date_font} if date_font else {}))] %}
+    {% endif %}
+
+    {# Temperatur: Farbe aus der Skala - die hoechste Stufe, deren "ab" passt.
+       Die Einheit haengt direkt am Wert, ohne Leerzeichen. Ein Gradzeichen
+       koennen die eingebauten WLED-Schriften nicht darstellen, deshalb ist
+       der Standard schlicht "C". #}
+    {% if temp_sensor != '' and states(temp_sensor) not in ['unknown', 'unavailable'] %}
+      {% set grad = states(temp_sensor) | float(0) %}
+      {% set tns = namespace(c = [0, 150, 255]) %}
+      {% for stufe in temp_scale %}
+        {% if grad >= (stufe.ab | float(-999)) %}{% set tns.c = stufe.farbe %}{% endif %}
+      {% endfor %}
+      {% set ns.l = ns.l + [dict({
+        'text': (grad | round(1) | string) + (temp_unit | string),
+        'color': tns.c}, **({'font': temp_font} if temp_font else {}))] %}
+    {% endif %}
+
+    {% if pv_sensor != '' and (not pv_only or (pv_w | float(0)) > 0) %}
+      {% set w = pv_w | float(0) %}
+      {% set ns.l = ns.l + [dict({
+        'text': 'PV ' + ((w / 1000) | round(1) | string + ' kW' if w | abs >= 1000
+                         else w | round(0) | int | string + ' W'),
+        'color': pv_c_high if w >= (pv_t_high | float(2000))
+                 else (pv_c_mid if w >= (pv_t_mid | float(500)) else pv_c_low)},
+        **({'font': pv_font} if pv_font else {}))] %}
+    {% endif %}
+
+    {% if hp_sensor != '' and (not hp_only or (hp_w | float(0)) >= (hp_t_idle | float(100))) %}
+      {% set w = hp_w | float(0) %}
+      {% set ns.l = ns.l + [dict({
+        'text': 'WP ' + ((w / 1000) | round(1) | string + ' kW' if w | abs >= 1000
+                         else w | round(0) | int | string + ' W'),
+        'color': hp_c_high if w >= (hp_t_high | float(2000))
+                 else (hp_c_mid if w >= (hp_t_mid | float(800))
+                 else (hp_c_low if w >= (hp_t_idle | float(100)) else hp_c_idle))},
+        **({'font': hp_font} if hp_font else {}))] %}
+    {% endif %}
+
+    {% if window_sensors | count > 0 and (not window_only or windows_open | int > 0) %}
+      {% set n = windows_open | int %}
+      {% set ns.l = ns.l + [dict({
+        'text': ('Alle Fenster zu' if n == 0
+                 else ('1 Fenster offen' if n == 1 else n | string + ' Fenster offen')),
+        'color': window_color}, **({'font': window_font} if window_font else {}))] %}
+    {% endif %}
+
+    {% for a in custom_apps %}
+      {% if a.show is not defined or (a.show | bool) %}
+        {% set ns.l = ns.l + [a] %}
+      {% endif %}
+    {% endfor %}
+
+    {{ ns.l }}
+
+# ====================================================================
+actions:
+  - choose:
+
+      # ----------------------------------------------------------
+      # A) App-Rotation
+      # ----------------------------------------------------------
+      - alias: "App-Rotation"
+        conditions:
+          - condition: trigger
+            id: rotation
+          - condition: time
+            after: !input active_from
+            before: !input active_to
+          - condition: template
+            value_template: "{{ host != '' }}"
+          # Matrix muss an und erreichbar sein
+          - condition: template
+            value_template: "{{ is_state(light_entity, 'on') }}"
+          # Bei aktivem Anwesenheitssensor: nur wenn jemand da ist
+          - condition: template
+            value_template: "{{ presence == '' or is_state(presence, 'on') }}"
+          - condition: template
+            value_template: "{{ apps | count > 0 }}"
+        sequence:
+          - variables:
+              secs: "{{ 60 if pattern == '0' else pattern[1:] | int }}"
+              item: >
+                {{ apps[ ((as_timestamp(now()) | int) // (secs | int)) % (apps | count) ] }}
+          - action: rest_command.wled_matrix_json
+            data:
+              host: "{{ host }}"
+              data: >
+                {% set seg = {
+                    "id": 0,
+                    "n": (item.text | string)[:64],
+                    "sx": item.speed | default(def_speed) | int,
+                    "ix": item.y_offset | default(def_y) | int,
+                    "c1": item.trail | default(0) | int,
+                    "c2": fonts[item.font | default(def_font)],
+                    "o1": item.gradient | default(false) | bool,
+                    "o2": false,
+                    "o3": item.reverse | default(false) | bool,
+                    "col": [ item.color | default([255,255,255]),
+                             [0,0,0],
+                             item.color2 | default([0,0,255]) ]
+                  } %}
+                {{ {
+                  "on": true,
+                  "bri": item.brightness | default(def_bri) | int,
+                  "seg": [ dict(seg, fx=fx_id | int) if (fx_id | int) > 0 else seg ]
+                } }}
+
+      # ----------------------------------------------------------
+      # B) Benachrichtigung (Event oder Text-Eingabefeld)
+      # ----------------------------------------------------------
+      - alias: "Benachrichtigung anzeigen"
+        conditions:
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: nachricht
+              - condition: trigger
+                id: eingabefeld
+          - condition: template
+            value_template: "{{ host != '' }}"
+          - condition: template
+            value_template: "{{ presence == '' or is_state(presence, 'on') }}"
+          - condition: template
+            value_template: "{{ states(light_entity) not in ['unavailable', 'unknown'] }}"
+        sequence:
+          - variables:
+              ev: "{{ trigger.event.data if trigger.id == 'nachricht' else {} }}"
+              msg: >
+                {% if trigger.id == 'eingabefeld' %}
+                  {{ trigger.to_state.state | default('') }}
+                {% else %}
+                  {{ ev.text | default('') }}
+                {% endif %}
+          - condition: template
+            value_template: "{{ msg | string | trim | length > 0 }}"
+          - variables:
+              dur: "{{ ev.duration | default(notify_duration) | int }}"
+          # Eingabefeld sofort leeren, damit der nächste Text wieder auslöst
+          - if:
+              - condition: template
+                value_template: "{{ trigger.id == 'eingabefeld' and text_helper != '' }}"
+            then:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ text_helper }}"
+                data:
+                  value: ""
+          # Matrix einschalten, falls sie gerade aus ist
+          - action: light.turn_on
+            target:
+              entity_id: "{{ light_entity }}"
+          - action: rest_command.wled_matrix_json
+            data:
+              host: "{{ host }}"
+              data: >
+                {% set seg = {
+                    "id": 0,
+                    "n": (msg | string | trim)[:64],
+                    "sx": ev.speed | default(def_speed) | int,
+                    "ix": ev.y_offset | default(def_y) | int,
+                    "c1": ev.trail | default(0) | int,
+                    "c2": fonts[ev.font | default(def_font)],
+                    "o1": ev.gradient | default(false) | bool,
+                    "o2": false,
+                    "o3": ev.reverse | default(false) | bool,
+                    "col": [ ev.color | default(notify_color),
+                             [0,0,0],
+                             ev.color2 | default([0,0,255]) ]
+                  } %}
+                {{ {
+                  "on": true,
+                  "bri": ev.brightness | default(def_bri) | int,
+                  "seg": [ dict(seg, fx=fx_id | int) if (fx_id | int) > 0 else seg ]
+                } }}
+          - delay:
+              seconds: "{{ dur }}"
+          # Danach zurück zur Rotation: aktuelle App sofort wieder anzeigen
+          - if:
+              - condition: template
+                value_template: >
+                  {{ apps | count > 0 and (presence == '' or is_state(presence, 'on')) }}
+            then:
+              - variables:
+                  secs2: "{{ 60 if pattern == '0' else pattern[1:] | int }}"
+                  back: >
+                    {{ apps[ ((as_timestamp(now()) | int) // (secs2 | int)) % (apps | count) ] }}
+              - action: rest_command.wled_matrix_json
+                data:
+                  host: "{{ host }}"
+                  data: >
+                    {% set seg = {
+                        "id": 0,
+                            "n": (back.text | string)[:64],
+                        "sx": back.speed | default(def_speed) | int,
+                        "ix": back.y_offset | default(def_y) | int,
+                        "c1": back.trail | default(0) | int,
+                        "c2": fonts[back.font | default(def_font)],
+                        "o1": back.gradient | default(false) | bool,
+                        "o2": false,
+                        "o3": back.reverse | default(false) | bool,
+                        "col": [ back.color | default([255,255,255]),
+                                 [0,0,0],
+                                 back.color2 | default([0,0,255]) ]
+                      } %}
+                    {{ {
+                      "on": true,
+                      "bri": back.brightness | default(def_bri) | int,
+                      "seg": [ dict(seg, fx=fx_id | int) if (fx_id | int) > 0 else seg ]
+                    } }}
+
+      # ----------------------------------------------------------
+      # C) Jemand kommt zurück: Strom an, warten, Anzeige an
+      # ----------------------------------------------------------
+      - alias: "Anwesend: einschalten"
+        conditions:
+          - condition: trigger
+            id: anwesend
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ power_switch != '' and not is_state(power_switch, 'on') }}"
+            then:
+              - action: homeassistant.turn_on
+                target:
+                  entity_id: "{{ power_switch }}"
+              - wait_template: "{{ states(light_entity) not in ['unavailable', 'unknown'] }}"
+                timeout:
+                  seconds: "{{ boot_timeout | int }}"
+                continue_on_timeout: false
+              - delay:
+                  seconds: 3
+          - condition: template
+            value_template: "{{ states(light_entity) not in ['unavailable', 'unknown'] }}"
+          - action: light.turn_on
+            target:
+              entity_id: "{{ light_entity }}"
+
+      # ----------------------------------------------------------
+      # D) Raum leer: Anzeige aus
+      # ----------------------------------------------------------
+      - alias: "Abwesend: Anzeige aus"
+        conditions:
+          - condition: trigger
+            id: anzeige_aus
+          - condition: template
+            value_template: "{{ states(light_entity) not in ['unavailable', 'unknown'] }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ light_entity }}"
+
+      # ----------------------------------------------------------
+      # E) Raum lange leer: Strom trennen
+      # ----------------------------------------------------------
+      - alias: "Abwesend: Strom trennen"
+        conditions:
+          - condition: trigger
+            id: strom_aus
+          - condition: template
+            value_template: "{{ power_switch != '' }}"
+        sequence:
+          - if:
+              - condition: template
+                value_template: "{{ states(light_entity) not in ['unavailable', 'unknown'] }}"
+            then:
+              - action: light.turn_off
+                target:
+                  entity_id: "{{ light_entity }}"
+              - delay:
+                  seconds: 2
+          - action: homeassistant.turn_off
+            target:
+              entity_id: "{{ power_switch }}"

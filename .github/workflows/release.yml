@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release veröffentlichen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Kein Release, wenn die Tests nicht durchlaufen
+      - name: Tests
+        run: |
+          pip install -r requirements-dev.txt
+          pytest -q
+
+      # Die Version im Blueprint muss zum Tag passen
+      - name: Version prüfen
+        run: python3 scripts/check_version.py "${GITHUB_REF_NAME#v}"
+
+      - name: Änderungen seit dem letzten Release sammeln
+        id: changelog
+        run: |
+          VORHER=$(git tag --sort=-version:refname | grep -v "^${GITHUB_REF_NAME}$" | head -1)
+          if [ -z "$VORHER" ]; then
+            LOG=$(git log --pretty='- %s' "${GITHUB_REF_NAME}")
+          else
+            LOG=$(git log --pretty='- %s' "${VORHER}..${GITHUB_REF_NAME}")
+          fi
+          {
+            echo 'text<<CHANGELOG_ENDE'
+            echo "$LOG"
+            echo CHANGELOG_ENDE
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Release anlegen
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: blueprints/automation/wled_matrix/wled_matrix_display.yaml
+          body: |
+            ## Änderungen
+
+            ${{ steps.changelog.outputs.text }}
+
+            ## Installation
+
+            [![In Home Assistant öffnen](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBENUTZER%2FREPO%2Fblob%2F${{ github.ref_name }}%2Fblueprints%2Fautomation%2Fwled_matrix%2Fwled_matrix_display.yaml)
+
+            Bestehende Installation aktualisieren: Einstellungen → Automationen & Szenen → Blueprints → drei Punkte → **Blueprint neu laden**.

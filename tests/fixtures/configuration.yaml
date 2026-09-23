@@ -1,0 +1,49 @@
+# Test-Konfiguration für die Prüfung in GitHub Actions.
+# Home Assistant lädt damit den Blueprint und meldet Fehler im Aufbau.
+default_config:
+
+rest_command:
+  wled_matrix_json:
+    url: "http://{{ host }}/json/state"
+    method: POST
+    content_type: "application/json"
+    payload: "{{ data if data is string else data | to_json }}"
+
+automation: !include automations.yaml
+
+# Entitäten, die die Test-Automation unten referenziert
+input_text:
+  matrix_nachricht:
+    name: Matrix Nachricht
+    max: 64
+
+input_boolean:
+  matrix_strom:
+    name: Matrix Strom
+
+template:
+  - binary_sensor:
+      - name: Testpraesenz
+        state: "off"
+      - name: Testfenster
+        state: "off"
+  - sensor:
+      - name: Testtemperatur
+        state: "7.3"
+        unit_of_measurement: "°C"
+      - name: Testpv
+        state: "3.2"
+        unit_of_measurement: "kW"
+      - name: Testwp
+        state: "820"
+        unit_of_measurement: "W"
+
+light:
+  - platform: template
+    lights:
+      testmatrix:
+        friendly_name: Testmatrix
+        turn_on:
+          - delay: "00:00:01"
+        turn_off:
+          - delay: "00:00:01"
