@@ -2,8 +2,9 @@
 """Prüft, ob die Version im Blueprint zum Git-Tag passt.
 
 Aufruf:  python3 scripts/check_version.py 1.2.0
-Der Blueprint trägt die Version als Kommentarzeile ``# Version: 1.2.0`` im Kopf,
-weil das Blueprint-Schema von Home Assistant kein eigenes Versionsfeld kennt.
+Der Blueprint trägt die Version als Kommentarzeile im Kopf, weil das
+Blueprint-Schema von Home Assistant kein eigenes Versionsfeld kennt.
+release-please hebt sie über die Markierung x-release-please-version an.
 """
 
 from __future__ import annotations
@@ -19,7 +20,8 @@ BLUEPRINT = (
     / "wled_matrix"
     / "wled_matrix_display.yaml"
 )
-MUSTER = re.compile(r"^#\s*Version:\s*(\S+)\s*$", re.MULTILINE)
+# Hinter der Version darf die Markierung von release-please stehen.
+MUSTER = re.compile(r"^#\s*Version:\s*(\S+)", re.MULTILINE)
 
 
 def main(argv: list[str]) -> int:

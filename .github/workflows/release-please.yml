@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    name: Release-PR pflegen und veröffentlichen
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      # Sammelt gemergte Commits, pflegt einen Release-PR mit CHANGELOG und
+      # angehobenen Versionsnummern. Wird dieser PR gemergt, entstehen Tag
+      # und GitHub-Release automatisch.
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # Erst wenn ein Release entstanden ist: die Blueprint-Datei anhängen,
+  # damit sie sich direkt von der Release-Seite herunterladen lässt.
+  blueprint-anhaengen:
+    name: Blueprint ans Release hängen
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # Sicherheitsnetz: Die Version im Blueprint muss zum Tag passen.
+      # release-please setzt sie selbst, das hier fängt eine kaputte
+      # Konfiguration ab, bevor eine falsche Datei veröffentlicht wird.
+      - name: Version gegen den Tag prüfen
+        env:
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: uv run python scripts/check_version.py "${TAG#v}"
+
+      - name: Datei anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          gh release upload "$TAG" \
+            blueprints/automation/wled_matrix/wled_matrix_display.yaml \
+            --clobber

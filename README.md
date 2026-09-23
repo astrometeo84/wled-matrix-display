@@ -73,7 +73,11 @@ Entwickelt und getestet mit einer 64×8-Matrix. Andere Größen funktionieren, b
 
 ## Mitmachen
 
-Fehler und Wünsche gern als Issue. Wie die Tests laufen und wie ein Release entsteht, steht in **[docs/entwicklung.md](docs/entwicklung.md)**.
+Fehler und Wünsche gern als Issue.
+
+Für Änderungen: `main` ist geschützt, es läuft alles über Pull Requests mit [Conventional Commits](https://www.conventionalcommits.org/de/). Version und CHANGELOG entstehen daraus automatisch. Der Ablauf steht in **[CONTRIBUTING.md](CONTRIBUTING.md)**, die technischen Hintergründe in **[docs/entwicklung.md](docs/entwicklung.md)**.
+
+Tests laufen mit [uv](https://docs.astral.sh/uv/): `uv run pytest`.
 
 ## Lizenz
 

@@ -3,5 +3,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+# uv.lock gehoert bewusst ins Repo - nicht ignorieren
 ha/
 .DS_Store

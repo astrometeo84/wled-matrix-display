@@ -1,9 +1,9 @@
 # WLED Matrix Display – Alles-in-einem-Blueprint für Home Assistant
-# Version: 1.0.0
-# https://github.com/astrometeo84/wled-matrix-display
+# Version: 1.0.0 # x-release-please-version
 #
-# Die Version wird beim Release gegen den Git-Tag geprüft
-# (scripts/check_version.py). Beide müssen übereinstimmen.
+# Die Zeile darüber pflegt release-please automatisch. Der Kommentar
+# "x-release-please-version" ist die Markierung dafür - nicht entfernen.
+# scripts/check_version.py prüft beim Release, dass sie zum Tag passt.
 
 blueprint:
   name: WLED Matrix – Alles-in-einem (Apps, Nachrichten, Anwesenheit)

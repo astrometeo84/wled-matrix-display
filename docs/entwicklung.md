@@ -108,47 +108,52 @@ Der dritte Job ist der aussagekräftigste. Er baut aus `tests/fixtures/` eine vo
 
 Schlägt dieser Job wegen einer Änderung in Home Assistant fehl und du willst ihn nicht mehr, lösche den Block `home-assistant:` aus der Datei. Die anderen beiden Jobs laufen unabhängig davon weiter.
 
-### `release.yml` — bei einem Tag `v*`
+### `release-please.yml` — bei Push auf `main`
 
-Der Ablauf:
+Hält einen Release-PR aktuell und veröffentlicht, sobald dieser gemergt wird.
+Der Ablauf ist in **[CONTRIBUTING.md](../CONTRIBUTING.md)** beschrieben.
 
-1. Tests laufen. Sind sie rot, gibt es kein Release.
-2. `scripts/check_version.py` vergleicht den Tag mit der Zeile `# Version:` im Kopf des Blueprints. Weichen sie ab, bricht der Lauf ab.
-3. Die Commit-Titel seit dem letzten Tag werden zu Release-Notizen zusammengefasst.
-4. Das Release wird angelegt, der Blueprint hängt als Datei daran.
+Zwei Dateien steuern das Verhalten:
 
-Ein Tag mit Bindestrich, etwa `v1.1.0-beta1`, wird automatisch als Vorabversion markiert.
+| Datei | Inhalt |
+|---|---|
+| `.release-please-config.json` | Welche Dateien die Version tragen, wie der CHANGELOG gegliedert wird |
+| `.release-please-manifest.json` | Die aktuelle Version — pflegt der Bot selbst |
+
+Die Version steht an zwei Stellen, beide werden automatisch angehoben:
+
+- im Blueprint-Kopf, markiert mit `# x-release-please-version`
+- in der `pyproject.toml` unter `[project] version`
+
+Ein Test vergleicht beide miteinander, ein zweiter prüft, dass die Markierung
+im Blueprint noch da ist. Ohne sie würde release-please die Datei stillschweigend
+unverändert lassen und eine Version mit falscher Nummer ausliefern.
+
+Nach dem Veröffentlichen hängt ein zweiter Job die Blueprint-Datei ans Release
+und lässt vorher `scripts/check_version.py` gegen den Tag laufen — ein
+Sicherheitsnetz für den Fall, dass die Konfiguration kaputtgeht.
 
 ## Ein Release veröffentlichen
 
-```bash
-# 1. Version an BEIDEN Stellen anheben
-#    blueprints/automation/wled_matrix/wled_matrix_display.yaml  ->  # Version: 1.1.0
-#    pyproject.toml                                              ->  version = "1.1.0"
-#    Ein Test prüft, dass beide übereinstimmen.
+Von Hand ist dafür nichts zu tun. Version und CHANGELOG entstehen aus den
+Commit-Nachrichten, siehe [CONTRIBUTING.md](../CONTRIBUTING.md). Du mergst nur
+den Release-PR, wenn es soweit ist.
 
-# 2. CHANGELOG ergänzen
-
-# 3. Committen, taggen, schieben
-git add -A
-git commit -m "Release 1.1.0"
-git tag v1.1.0
-git push origin main --tags
-```
-
-Den Rest erledigt die Action. Läuft etwas schief, lässt sich ein Tag zurücknehmen:
+Soll ein Release zurückgenommen werden:
 
 ```bash
-git tag -d v1.1.0
+gh release delete v1.1.0 --yes
 git push origin :refs/tags/v1.1.0
 ```
 
+Danach die Version in `.release-please-manifest.json` auf den vorherigen Stand
+setzen, sonst zählt der Bot von der gelöschten Version aus weiter.
+
 ## Versionsnummern
 
-Nach [Semantic Versioning](https://semver.org/lang/de/):
+Nach [Semantic Versioning](https://semver.org/lang/de/), abgeleitet aus den
+Commit-Präfixen:
 
-- **Major** — bestehende Automationen müssen angepasst werden, etwa weil eine Eingabe umbenannt wurde.
-- **Minor** — neue Funktion, bestehende Einrichtungen laufen unverändert weiter.
-- **Patch** — Fehlerbehebung.
-
-Wird eine Eingabe umbenannt oder entfernt, gehört ein Hinweis in den CHANGELOG. Nutzer müssen ihre Automation dann neu speichern.
+- **Major** — `feat!:` oder `BREAKING CHANGE:`. Bestehende Automationen müssen angepasst werden, etwa weil eine Eingabe umbenannt wurde. Nutzer müssen ihre Automation dann öffnen und neu speichern.
+- **Minor** — `feat:`. Neue Funktion, bestehende Einrichtungen laufen unverändert weiter.
+- **Patch** — `fix:`. Fehlerbehebung.
