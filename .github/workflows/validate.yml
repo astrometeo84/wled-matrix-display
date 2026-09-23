@@ -12,7 +12,7 @@ permissions:
 jobs:
   yamllint:
     name: YAML-Stil
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
       # Die uv-Version ist bewusst festgenagelt. Ohne Angabe installiert
@@ -32,7 +32,7 @@ jobs:
 
   tests:
     name: Tests (Python ${{ matrix.python }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:
@@ -49,7 +49,7 @@ jobs:
 
   home-assistant:
     name: Home Assistant lädt den Blueprint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v7
 
