@@ -15,9 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Die uv-Version ist bewusst festgenagelt. Ohne Angabe installiert
+      # setup-uv nicht die neueste uv, sondern die in der Action-Version
+      # hinterlegte. Ist die älter als die lokale, kennt sie das Format der
+      # uv.lock nicht (Feld "revision") und will die Datei neu schreiben –
+      # woran dann --locked scheitert, obwohl lokal alles stimmt.
+      # Beim Anheben der lokalen uv diese Zeile mitziehen.
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          version: "0.12.18"
       # --locked bricht ab, wenn uv.lock nicht zur pyproject.toml passt.
       # So fällt auf, wenn jemand eine Abhängigkeit ändert und vergisst,
       # die Sperrdatei neu zu erzeugen.
@@ -35,6 +42,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          version: "0.12.18"
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
       - run: uv run pytest -v

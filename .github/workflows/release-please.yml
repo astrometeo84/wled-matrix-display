@@ -40,9 +40,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Version festgenagelt, Begründung siehe validate.yml.
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          version: "0.12.18"
 
       # Sicherheitsnetz: Die Version im Blueprint muss zum Tag passen.
       # release-please setzt sie selbst, das hier fängt eine kaputte

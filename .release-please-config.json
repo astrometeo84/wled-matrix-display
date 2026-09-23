@@ -10,12 +10,7 @@
       "draft": false,
       "prerelease": false,
       "extra-files": [
-        "blueprints/automation/wled_matrix/wled_matrix_display.yaml",
-        {
-          "type": "toml",
-          "path": "pyproject.toml",
-          "jsonpath": "$.project.version"
-        }
+        "blueprints/automation/wled_matrix/wled_matrix_display.yaml"
       ],
       "changelog-sections": [
         {"type": "feat", "section": "Hinzugefügt"},

@@ -320,12 +320,15 @@ def test_stolperfallen_sind_erklaert(blueprint):
         assert stichwort in beschreibung, f"{name}: Hinweis auf '{stichwort}' fehlt"
 
 
-def test_version_in_pyproject_passt_zum_blueprint():
-    """Die Version steht an zwei Stellen und muss übereinstimmen.
+def test_version_steht_nur_im_blueprint():
+    """Der Blueprint ist die einzige Stelle, die eine Versionsnummer trägt.
 
-    Im Blueprint als Kommentarzeile ``# Version:`` – von dort liest sie
-    ``scripts/check_version.py`` beim Release – und in der ``pyproject.toml``.
-    Laufen sie auseinander, bricht der Release-Workflow ab, aber erst spät.
+    Von dort liest ``scripts/check_version.py`` sie beim Release. Eine
+    zweite Quelle wäre nicht nur Pflegeaufwand, sie hat konkret geschadet:
+    Solange die ``pyproject.toml`` die Version mitführte, hob release-please
+    sie dort an – und die ``uv.lock``, die dieselbe Nummer enthält, blieb
+    zurück. Die CI des Release-PR scheiterte dann an ``--locked``,
+    ausgerechnet bei dem PR, den man mergen will.
     """
     import re
     import tomllib
@@ -335,9 +338,60 @@ def test_version_in_pyproject_passt_zum_blueprint():
     treffer = re.search(r"^#\s*Version:\s*(\S+)",
                         BLUEPRINT.read_text(encoding="utf-8"), re.MULTILINE)
     assert treffer, "Zeile '# Version: ...' fehlt im Blueprint"
-    assert treffer.group(1) == projekt["project"]["version"], (
-        f'Blueprint sagt {treffer.group(1)}, pyproject.toml sagt '
-        f'{projekt["project"]["version"]}'
+    assert projekt["project"]["version"] == "0", (
+        "Die Version in der pyproject.toml ist ein eingefrorener Platzhalter. "
+        f'Sie steht auf {projekt["project"]["version"]!r} statt "0" – '
+        "vermutlich hat jemand sie „aktualisiert“. Die echte Version gehört "
+        "allein in den Kopf des Blueprints."
+    )
+
+
+def test_release_please_fasst_die_pyproject_nicht_an():
+    """Gegenstück zum Test darüber, aus derselben Erfahrung heraus.
+
+    Landet die ``pyproject.toml`` wieder in ``extra-files``, hebt der Bot
+    die Version dort an und die ``uv.lock`` läuft weg.
+    """
+    import json
+
+    wurzel = BLUEPRINT.parent.parent.parent.parent
+    cfg = json.loads((wurzel / ".release-please-config.json").read_text(encoding="utf-8"))
+
+    for eintrag in cfg["packages"]["."]["extra-files"]:
+        pfad = eintrag if isinstance(eintrag, str) else eintrag["path"]
+        assert "pyproject.toml" not in pfad, (
+            "pyproject.toml steht wieder in extra-files. Dann hebt "
+            "release-please die Version dort an, ohne uv.lock nachzuziehen, "
+            "und die CI des Release-PR scheitert an --locked."
+        )
+
+
+def test_uv_lock_passt_zur_pyproject_version():
+    """Die uv.lock führt die Version des eigenen Projekts mit.
+
+    Weichen beide ab, bricht jeder Lauf mit ``--locked`` ab – und zwar mit
+    einer Meldung, die auf fehlende Abhängigkeiten hindeutet statt auf die
+    Versionsnummer. Dieser Test zeigt direkt auf die Ursache.
+    """
+    import tomllib
+
+    wurzel = BLUEPRINT.parent.parent.parent.parent
+    sperrdatei = wurzel / "uv.lock"
+    if not sperrdatei.is_file():
+        pytest.skip("uv.lock nicht vorhanden – 'uv lock' erzeugt sie")
+
+    projekt = tomllib.loads((wurzel / "pyproject.toml").read_text(encoding="utf-8"))
+    sperre = tomllib.loads(sperrdatei.read_text(encoding="utf-8"))
+
+    eigene = [p for p in sperre.get("package", [])
+              if p.get("source", {}).get("virtual") == "."]
+    if not eigene:
+        pytest.skip("uv.lock führt das eigene Projekt nicht als Eintrag")
+
+    assert eigene[0]["version"] == projekt["project"]["version"], (
+        f'uv.lock sagt {eigene[0]["version"]}, pyproject.toml sagt '
+        f'{projekt["project"]["version"]}. Ein "uv lock" bringt beide '
+        "wieder zusammen."
     )
 
 
