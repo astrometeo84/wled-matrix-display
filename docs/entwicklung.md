@@ -1,15 +1,5 @@
 # Entwicklung
 
-## Repo einrichten
-
-Beim ersten Mal erledigt ein Skript die Platzhalter und Git:
-
-```bash
-./scripts/setup.sh <github-benutzer> [repo-name]
-```
-
-Es ersetzt `BENUTZER/REPO` in README, Release-Workflow und Blueprint-Kopf — auch in der URL-kodierten Form im Import-Knopf — führt die Tests aus und legt das Git-Repository an. Sind die Testpakete noch nicht installiert, überspringt es diesen Schritt mit einem Hinweis. Schlägt dagegen ein Test wirklich fehl, bricht es ab.
-
 ## Tests lokal ausführen
 
 ```bash
