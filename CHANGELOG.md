@@ -3,6 +3,13 @@
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.0.1](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.0...v1.0.1) (2026-09-23)
+
+
+### Geändert
+
+* code structure for improved readability and maintainability switch to uv ([9a226aa](https://github.com/astrometeo84/wled-matrix-display/commit/9a226aa3b64252e55161c7a852a77f35d1dfa741))
+
 ## [Unveröffentlicht]
 
 ### Geändert
