@@ -17,7 +17,7 @@
         {"type": "fix", "section": "Behoben"},
         {"type": "perf", "section": "Geändert"},
         {"type": "refactor", "section": "Geändert"},
-        {"type": "docs", "section": "Dokumentation"},
+        {"type": "docs", "section": "Dokumentation", "hidden": true},
         {"type": "test", "section": "Tests", "hidden": true},
         {"type": "ci", "section": "Werkzeuge", "hidden": true},
         {"type": "chore", "section": "Werkzeuge", "hidden": true}
