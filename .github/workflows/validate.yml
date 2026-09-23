@@ -18,8 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install yamllint
-      - run: yamllint --strict .
+      - run: python -m pip install yamllint
+      - run: python -m yamllint --strict .
 
   tests:
     name: Tests (Python ${{ matrix.python }})
@@ -34,8 +34,11 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - run: pip install -r requirements-dev.txt
-      - run: pytest -v
+          # Ohne diese Zeile sucht setup-python nur nach requirements.txt
+          # oder pyproject.toml und bricht mit "no file matched" ab.
+          cache-dependency-path: requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -v
 
   home-assistant:
     name: Home Assistant lädt den Blueprint
