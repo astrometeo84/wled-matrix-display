@@ -318,3 +318,52 @@ def test_stolperfallen_sind_erklaert(blueprint):
     ]:
         beschreibung = find_input(blueprint, name).get("description", "")
         assert stichwort in beschreibung, f"{name}: Hinweis auf '{stichwort}' fehlt"
+
+
+def test_version_in_pyproject_passt_zum_blueprint():
+    """Die Version steht an zwei Stellen und muss übereinstimmen.
+
+    Im Blueprint als Kommentarzeile ``# Version:`` – von dort liest sie
+    ``scripts/check_version.py`` beim Release – und in der ``pyproject.toml``.
+    Laufen sie auseinander, bricht der Release-Workflow ab, aber erst spät.
+    """
+    import re
+    import tomllib
+
+    projekt = tomllib.loads((BLUEPRINT.parent.parent.parent.parent / "pyproject.toml")
+                            .read_text(encoding="utf-8"))
+    treffer = re.search(r"^#\s*Version:\s*(\S+)",
+                        BLUEPRINT.read_text(encoding="utf-8"), re.MULTILINE)
+    assert treffer, "Zeile '# Version: ...' fehlt im Blueprint"
+    assert treffer.group(1) == projekt["project"]["version"], (
+        f'Blueprint sagt {treffer.group(1)}, pyproject.toml sagt '
+        f'{projekt["project"]["version"]}'
+    )
+
+
+def test_release_please_marker_vorhanden():
+    """Ohne die Markierung hebt release-please die Version im Blueprint nicht an.
+
+    Sie fehlt lautlos: Der Release entsteht trotzdem, nur trägt die
+    ausgelieferte Datei dann die alte Versionsnummer.
+    """
+    kopf = BLUEPRINT.read_text(encoding="utf-8").split("blueprint:")[0]
+    assert "x-release-please-version" in kopf, (
+        "Markierung im Kopf des Blueprints fehlt"
+    )
+
+
+def test_release_please_konfiguration_passt_zu_den_dateien():
+    """Die in extra-files genannten Pfade müssen existieren."""
+    import json
+
+    wurzel = BLUEPRINT.parent.parent.parent.parent
+    cfg = json.loads((wurzel / ".release-please-config.json").read_text(encoding="utf-8"))
+    paket = cfg["packages"]["."]
+
+    for eintrag in paket["extra-files"]:
+        pfad = eintrag if isinstance(eintrag, str) else eintrag["path"]
+        assert (wurzel / pfad).is_file(), f"extra-files verweist ins Leere: {pfad}"
+
+    manifest = json.loads((wurzel / ".release-please-manifest.json").read_text(encoding="utf-8"))
+    assert "." in manifest, "Manifest kennt das Wurzelpaket nicht"

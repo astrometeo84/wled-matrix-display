@@ -5,6 +5,17 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- **Umstellung auf [uv](https://docs.astral.sh/uv/).** `requirements-dev.txt`
+  und `pytest.ini` sind in die `pyproject.toml` gewandert, dazu kommt eine
+  `uv.lock` mit festgezurrten Versionen. Lokal genügt jetzt `uv run pytest` –
+  ohne virtuelle Umgebung von Hand anzulegen oder zu aktivieren, was
+  besonders unter Windows die Execution-Policy-Hürde erspart.
+- Die CI läuft mit `--locked`. Weichen `uv.lock` und `pyproject.toml`
+  voneinander ab, bricht sie ab, statt stillschweigend andere Versionen zu
+  installieren.
+
 ## [1.0.0] – 2026-09-23
 
 Erste Veröffentlichung. Der Blueprint wurde vor dem Release an einer echten

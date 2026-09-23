@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "wled-matrix-display",
+      "changelog-path": "CHANGELOG.md",
+      "include-component-in-tag": false,
+      "bump-minor-pre-major": false,
+      "draft": false,
+      "prerelease": false,
+      "extra-files": [
+        "blueprints/automation/wled_matrix/wled_matrix_display.yaml",
+        {
+          "type": "toml",
+          "path": "pyproject.toml",
+          "jsonpath": "$.project.version"
+        }
+      ],
+      "changelog-sections": [
+        {"type": "feat", "section": "Hinzugefügt"},
+        {"type": "fix", "section": "Behoben"},
+        {"type": "perf", "section": "Geändert"},
+        {"type": "refactor", "section": "Geändert"},
+        {"type": "docs", "section": "Dokumentation"},
+        {"type": "test", "section": "Tests", "hidden": true},
+        {"type": "ci", "section": "Werkzeuge", "hidden": true},
+        {"type": "chore", "section": "Werkzeuge", "hidden": true}
+      ]
+    }
+  }
+}
