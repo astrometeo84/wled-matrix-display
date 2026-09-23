@@ -8,7 +8,6 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Dokumentation
 
-* Effekt-ID nicht mehr als automatisch erkannt beschreiben ([f98f62c](https://github.com/astrometeo84/wled-matrix-display/commit/f98f62c47a481094d63e12dea5b651f24099122b))
 * Effekt-ID nicht mehr als automatisch erkannt beschreiben ([df0c169](https://github.com/astrometeo84/wled-matrix-display/commit/df0c1691170f63c26337408069e53045d9f5e271))
 
 ## [1.0.2](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.1...v1.0.2) (2026-09-23)
@@ -19,40 +18,37 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 * lock uv version in workflows and update changelog for consistency ([a9390cb](https://github.com/astrometeo84/wled-matrix-display/commit/a9390cb8b110db033827f602561405010ee06969))
 * release-please-action auf v5 (Node 24) anheben ([7aa7569](https://github.com/astrometeo84/wled-matrix-display/commit/7aa7569a66202aab4e78c86f0134091b587e3f81))
 
+### Geändert
+
+* Die uv-Version ist in beiden Workflows festgenagelt. `setup-uv` installiert
+  ohne Angabe eine in der Action hinterlegte, oft ältere uv; die kennt das
+  Format neuerer `uv.lock`-Dateien nicht und lässt `--locked` scheitern,
+  obwohl lokal alles stimmt.
+* Die `pyproject.toml` trägt keine Versionsnummer mehr, sondern einen
+  eingefrorenen Platzhalter. Sonst hätte release-please sie angehoben, ohne
+  die `uv.lock` nachzuziehen — und ausgerechnet die CI des Release-PR wäre
+  daran gescheitert. Die Version steht jetzt allein im Blueprint-Kopf.
+
+### Tests
+
+* Drei Tests sichern die neue Regel ab: Platzhalter bleibt stehen,
+  `pyproject.toml` taucht nicht wieder in `extra-files` auf, `uv.lock` und
+  `pyproject.toml` nennen dieselbe Version.
+
 ## [1.0.1](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.0...v1.0.1) (2026-09-23)
 
 
 ### Geändert
 
 * code structure for improved readability and maintainability switch to uv ([9a226aa](https://github.com/astrometeo84/wled-matrix-display/commit/9a226aa3b64252e55161c7a852a77f35d1dfa741))
-
-## [Unveröffentlicht]
-
-### Geändert
-
-- **Umstellung auf [uv](https://docs.astral.sh/uv/).** `requirements-dev.txt`
+* **Umstellung auf [uv](https://docs.astral.sh/uv/).** `requirements-dev.txt`
   und `pytest.ini` sind in die `pyproject.toml` gewandert, dazu kommt eine
   `uv.lock` mit festgezurrten Versionen. Lokal genügt jetzt `uv run pytest` –
   ohne virtuelle Umgebung von Hand anzulegen oder zu aktivieren, was
   besonders unter Windows die Execution-Policy-Hürde erspart.
-- Die CI läuft mit `--locked`. Weichen `uv.lock` und `pyproject.toml`
+* Die CI läuft mit `--locked`. Weichen `uv.lock` und `pyproject.toml`
   voneinander ab, bricht sie ab, statt stillschweigend andere Versionen zu
   installieren.
-- Die uv-Version ist in beiden Workflows festgenagelt. `setup-uv` installiert
-  ohne Angabe eine in der Action hinterlegte, oft ältere uv; die kennt das
-  Format neuerer `uv.lock`-Dateien nicht und lässt `--locked` scheitern,
-  obwohl lokal alles stimmt.
-- Die `pyproject.toml` trägt keine Versionsnummer mehr, sondern einen
-  eingefrorenen Platzhalter. Sonst hätte release-please sie angehoben, ohne
-  die `uv.lock` nachzuziehen — und ausgerechnet die CI des Release-PR wäre
-  daran gescheitert. Die Version steht jetzt allein im Blueprint-Kopf.
-- `googleapis/release-please-action` auf v5 angehoben (Node-24-Laufzeit).
-
-### Tests
-
-- Drei Tests sichern die neue Regel ab: Platzhalter bleibt stehen,
-  `pyproject.toml` taucht nicht wieder in `extra-files` auf, `uv.lock` und
-  `pyproject.toml` nennen dieselbe Version.
 
 ## [1.0.0] – 2026-09-23
 

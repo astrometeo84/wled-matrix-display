@@ -160,6 +160,18 @@ Nach dem Veröffentlichen hängt ein zweiter Job die Blueprint-Datei ans Release
 und lässt vorher `scripts/check_version.py` gegen den Tag laufen — ein
 Sicherheitsnetz für den Fall, dass die Konfiguration kaputtgeht.
 
+### Die Runner-Version
+
+Alle Jobs laufen auf `ubuntu-26.04` statt auf `ubuntu-latest`. GitHub zieht
+`ubuntu-latest` in Abständen auf die nächste Ubuntu-Version um, zuletzt ab
+Oktober 2026 von 24.04 auf 26.04. Mit fester Version passiert so ein Wechsel
+nicht unbemerkt zwischen zwei Läufen, sondern als eigener Commit, dessen CI
+zeigt, ob alles weiterläuft.
+
+Python kommt dabei nicht vom Runner, sondern über `setup-uv` in der jeweiligen
+Version der Testmatrix, und Home Assistant läuft im Container. Ein Wechsel der
+Ubuntu-Version ist deshalb meist unkritisch.
+
 ## Ein Release veröffentlichen
 
 Von Hand ist dafür nichts zu tun. Version und CHANGELOG entstehen aus den
