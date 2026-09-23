@@ -60,6 +60,6 @@ jobs:
 
             ## Installation
 
-            [![In Home Assistant öffnen](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBENUTZER%2FREPO%2Fblob%2F${{ github.ref_name }}%2Fblueprints%2Fautomation%2Fwled_matrix%2Fwled_matrix_display.yaml)
+            [![In Home Assistant öffnen](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fastrometeo84%2Fwled-matrix-display%2Fblob%2F${{ github.ref_name }}%2Fblueprints%2Fautomation%2Fwled_matrix%2Fwled_matrix_display.yaml)
 
             Bestehende Installation aktualisieren: Einstellungen → Automationen & Szenen → Blueprints → drei Punkte → **Blueprint neu laden**.

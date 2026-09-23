@@ -2,11 +2,11 @@
 
 Ein Blueprint, der aus einer WLED-Matrix eine Info-Anzeige macht — Apps im Wechsel, Benachrichtigungen dazwischen, und die Matrix schaltet sich ab, wenn niemand im Raum ist. Vergleichbar mit der Ulanzi/Awtrix-Uhr, aber für beliebige WLED-Matrizen.
 
-[![Validierung](https://github.com/BENUTZER/REPO/actions/workflows/validate.yml/badge.svg)](https://github.com/BENUTZER/REPO/actions/workflows/validate.yml)
-[![Release](https://img.shields.io/github/v/release/BENUTZER/REPO)](https://github.com/BENUTZER/REPO/releases)
+[![Validierung](https://github.com/astrometeo84/wled-matrix-display/actions/workflows/validate.yml/badge.svg)](https://github.com/astrometeo84/wled-matrix-display/actions/workflows/validate.yml)
+[![Release](https://img.shields.io/github/v/release/astrometeo84/wled-matrix-display)](https://github.com/astrometeo84/wled-matrix-display/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[![In Home Assistant öffnen](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2FBENUTZER%2FREPO%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fwled_matrix%2Fwled_matrix_display.yaml)
+[![In Home Assistant öffnen](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fastrometeo84%2Fwled-matrix-display%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fwled_matrix%2Fwled_matrix_display.yaml)
 
 ---
 

@@ -1,6 +1,6 @@
 # WLED Matrix Display – Alles-in-einem-Blueprint für Home Assistant
 # Version: 1.0.0
-# https://github.com/BENUTZER/REPO
+# https://github.com/astrometeo84/wled-matrix-display
 #
 # Die Version wird beim Release gegen den Git-Tag geprüft
 # (scripts/check_version.py). Beide müssen übereinstimmen.
