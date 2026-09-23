@@ -3,6 +3,14 @@
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.0.3](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.2...v1.0.3) (2026-09-23)
+
+
+### Dokumentation
+
+* Effekt-ID nicht mehr als automatisch erkannt beschreiben ([f98f62c](https://github.com/astrometeo84/wled-matrix-display/commit/f98f62c47a481094d63e12dea5b651f24099122b))
+* Effekt-ID nicht mehr als automatisch erkannt beschreiben ([df0c169](https://github.com/astrometeo84/wled-matrix-display/commit/df0c1691170f63c26337408069e53045d9f5e271))
+
 ## [1.0.2](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.1...v1.0.2) (2026-09-23)
 
 
