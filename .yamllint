@@ -20,5 +20,10 @@ rules:
   brackets:
     max-spaces-inside: 1
 
+# Nicht prüfen: fremde YAML-Dateien aus virtuellen Umgebungen,
+# die Workflow-Dateien und die im CI erzeugte Testkonfiguration.
 ignore: |
   .github/
+  .venv/
+  venv/
+  ha/

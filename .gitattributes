@@ -1,0 +1,13 @@
+# Zeilenenden vereinheitlichen.
+#
+# Ohne diese Datei wandelt Git unter Windows beim Auschecken LF in CRLF um
+# (core.autocrlf). yamllint bemängelt das dann mit "wrong new line character:
+# expected \n". Mit eol=lf bekommt jede Plattform dieselben Zeilenenden,
+# unabhängig von der lokalen Git-Einstellung.
+* text=auto eol=lf
+
+# Binärdateien nicht anfassen
+*.png binary
+*.jpg binary
+*.gif binary
+*.zip binary
