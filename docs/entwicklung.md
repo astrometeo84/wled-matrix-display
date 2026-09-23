@@ -50,8 +50,8 @@ Die Tests lesen die Jinja-Vorlagen **direkt aus der Blueprint-Datei** statt Kopi
 | Datei | Prüft |
 |---|---|
 | `tests/test_struktur.py` | Aufbau: Abschnitte, Eingaben, Selektoren, Trigger, Zweige |
-| `tests/test_vorlagen.py` | Logik: IP-Erkennung, Effekt-ID, Einheiten, App-Liste, Rotation |
-| `tests/test_befehle.py` | Die JSON-Befehle, die tatsächlich an WLED gehen |
+| `tests/test_vorlagen.py` | Logik: IP-Erkennung, Einheiten, App-Liste, Rotation |
+| `tests/test_befehle.py` | Die JSON-Befehle, die tatsächlich an WLED gehen, samt Effekt-ID |
 
 Ein paar Tests sind bewusst streng, weil sie Fehler abfangen, die im Betrieb schwer zu finden sind:
 

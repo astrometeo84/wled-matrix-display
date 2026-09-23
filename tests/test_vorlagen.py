@@ -1,4 +1,4 @@
-"""Vorlagen aus dem Blueprint: IP-Erkennung, Effekt-ID, Einheiten, App-Liste."""
+"""Vorlagen aus dem Blueprint: IP-Erkennung, Einheiten, App-Liste."""
 
 from __future__ import annotations
 
