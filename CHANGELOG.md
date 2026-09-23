@@ -22,6 +22,21 @@ Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 - Die CI läuft mit `--locked`. Weichen `uv.lock` und `pyproject.toml`
   voneinander ab, bricht sie ab, statt stillschweigend andere Versionen zu
   installieren.
+- Die uv-Version ist in beiden Workflows festgenagelt. `setup-uv` installiert
+  ohne Angabe eine in der Action hinterlegte, oft ältere uv; die kennt das
+  Format neuerer `uv.lock`-Dateien nicht und lässt `--locked` scheitern,
+  obwohl lokal alles stimmt.
+- Die `pyproject.toml` trägt keine Versionsnummer mehr, sondern einen
+  eingefrorenen Platzhalter. Sonst hätte release-please sie angehoben, ohne
+  die `uv.lock` nachzuziehen — und ausgerechnet die CI des Release-PR wäre
+  daran gescheitert. Die Version steht jetzt allein im Blueprint-Kopf.
+- `googleapis/release-please-action` auf v5 angehoben (Node-24-Laufzeit).
+
+### Tests
+
+- Drei Tests sichern die neue Regel ab: Platzhalter bleibt stehen,
+  `pyproject.toml` taucht nicht wieder in `extra-files` auf, `uv.lock` und
+  `pyproject.toml` nennen dieselbe Version.
 
 ## [1.0.0] – 2026-09-23
 

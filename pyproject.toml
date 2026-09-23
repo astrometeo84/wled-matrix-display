@@ -4,7 +4,18 @@
 
 [project]
 name = "wled-matrix-display"
-version = "1.0.1"
+# Platzhalter, absichtlich eingefroren. Die echte Version des Projekts steht
+# allein im Kopf des Blueprints; nur dort hebt release-please sie an.
+#
+# Früher stand sie auch hier. Das ging nicht gut: uv schreibt die Version des
+# eigenen Projekts in die uv.lock. Hebt release-please sie in dieser Datei an,
+# ohne dass jemand `uv lock` laufen lässt, passen Sperrdatei und pyproject
+# nicht mehr zusammen – und die CI des Release-PR scheitert an --locked.
+# Ausgerechnet der PR, den man mergen will, wäre dann blockiert.
+#
+# Da hier kein Paket gebaut und nichts veröffentlicht wird (package = false),
+# ist die Nummer ohnehin bedeutungslos. Bitte nicht "aktualisieren".
+version = "0"
 description = "Home-Assistant-Blueprint für eine WLED-Matrix als Info-Anzeige"
 readme = "README.md"
 requires-python = ">=3.11"

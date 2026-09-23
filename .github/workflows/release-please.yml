@@ -20,7 +20,10 @@ jobs:
       # Sammelt gemergte Commits, pflegt einen Release-PR mit CHANGELOG und
       # angehobenen Versionsnummern. Wird dieser PR gemergt, entstehen Tag
       # und GitHub-Release automatisch.
-      - uses: googleapis/release-please-action@v4
+      #
+      # v5 unterscheidet sich von v4 allein durch die Node-24-Laufzeit;
+      # Eingaben und Ausgaben sind unverändert.
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
           config-file: .release-please-config.json
@@ -37,9 +40,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Version festgenagelt, Begründung siehe validate.yml.
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          version: "0.12.18"
 
       # Sicherheitsnetz: Die Version im Blueprint muss zum Tag passen.
       # release-please setzt sie selbst, das hier fängt eine kaputte

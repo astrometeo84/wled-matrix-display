@@ -67,7 +67,7 @@ Werte, die im Blueprint stehen, werden in den Tests **nicht noch einmal hingesch
 
 ### Taugen die Tests etwas?
 
-Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und schaut, ob die Tests anschlagen. Diese siebzehn Änderungen werden erkannt:
+Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und schaut, ob die Tests anschlagen. Diese zwanzig Änderungen werden erkannt:
 
 | Eingebauter Fehler | Wird erkannt |
 |---|---|
@@ -88,6 +88,9 @@ Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und sc
 | Betrag bei der Einheitenwahl entfernt | ✅ |
 | Schwelle der Farbskala exklusiv statt inklusiv | ✅ |
 | Bereitschafts-Schwelle der Wärmepumpe ignoriert | ✅ |
+| Version wieder in der `pyproject.toml` gepflegt | ✅ |
+| `pyproject.toml` wieder in `extra-files` eingetragen | ✅ |
+| `uv.lock` und `pyproject.toml` mit verschiedenen Versionen | ✅ |
 
 Viele davon stehen für Fehler, die im Betrieb tatsächlich aufgetreten sind.
 Jeder davon hat erst einen Test bekommen, nachdem er aufgefallen war.
@@ -117,17 +120,41 @@ Zwei Dateien steuern das Verhalten:
 
 | Datei | Inhalt |
 |---|---|
-| `.release-please-config.json` | Welche Dateien die Version tragen, wie der CHANGELOG gegliedert wird |
+| `.release-please-config.json` | Welche Datei die Version trägt, wie der CHANGELOG gegliedert wird |
 | `.release-please-manifest.json` | Die aktuelle Version — pflegt der Bot selbst |
 
-Die Version steht an zwei Stellen, beide werden automatisch angehoben:
+Die Version steht an **genau einer** Stelle: im Blueprint-Kopf, markiert mit
+`# x-release-please-version`. Ein Test prüft, dass die Markierung noch da ist.
+Ohne sie würde release-please die Datei stillschweigend unverändert lassen und
+eine Version mit falscher Nummer ausliefern.
 
-- im Blueprint-Kopf, markiert mit `# x-release-please-version`
-- in der `pyproject.toml` unter `[project] version`
+### Warum die pyproject.toml die Version nicht mitführt
 
-Ein Test vergleicht beide miteinander, ein zweiter prüft, dass die Markierung
-im Blueprint noch da ist. Ohne sie würde release-please die Datei stillschweigend
-unverändert lassen und eine Version mit falscher Nummer ausliefern.
+Sie tat es anfangs, und das war ein Fehler. uv schreibt die Version des eigenen
+Projekts in die `uv.lock`. Hebt release-please sie in der `pyproject.toml` an,
+läuft die Sperrdatei weg — und die CI scheitert an `--locked`. Betroffen wäre
+ausgerechnet der Release-PR selbst, also der eine PR, den man mergen will, um
+zu veröffentlichen. Ein Henne-Ei-Problem, das man nur durch einen zusätzlichen
+Commit im Branch des Bots auflösen könnte.
+
+Deshalb steht dort jetzt `version = "0"`, eingefroren. Das Projekt wird nicht
+als Paket gebaut (`package = false`), die Nummer ist reine Formalie. Drei Tests
+halten das fest: einer, dass der Platzhalter stehen bleibt, einer, dass die
+`pyproject.toml` nicht wieder in `extra-files` auftaucht, und einer, dass
+`uv.lock` und `pyproject.toml` dieselbe Version nennen.
+
+### Die uv-Version in den Workflows
+
+`astral-sh/setup-uv` installiert ohne `version:`-Angabe nicht die neueste uv,
+sondern die in der jeweiligen Action-Version hinterlegte. Ist die älter als die
+lokal benutzte, kennt sie das Format der `uv.lock` nicht — die Datei trägt oben
+ein Feld `revision`, das mit neueren uv-Versionen hochgezählt wird — und will
+sie neu schreiben. `--locked` bricht dann ab, obwohl lokal `uv lock` nichts
+mehr zu tun findet. Die Meldung lautet irreführend „To update the lockfile,
+run `uv lock`".
+
+Beide Workflows nageln die uv-Version daher fest. Beim Anheben der lokalen uv
+diese Zeilen mitziehen.
 
 Nach dem Veröffentlichen hängt ein zweiter Job die Blueprint-Datei ans Release
 und lässt vorher `scripts/check_version.py` gegen den Tag laufen — ein
