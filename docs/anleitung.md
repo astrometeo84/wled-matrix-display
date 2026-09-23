@@ -22,6 +22,7 @@ Ein einziger Blueprint macht aus deiner WLED-Matrix eine Anzeige wie die Ulanzi/
 | Außentemperatur | Sensor auswählen | `7.3C` |
 | PV-Leistung | Sensor auswählen | `PV 3.2kW`, Farbe nach Höhe |
 | Wärmepumpen-Verbrauch | Sensor auswählen | `WP 820W` |
+| PV-Speicher | Sensor auswählen | `Speicher bei 57% ^`, Farbe nach Ladestand |
 | Offene Fenster | Kontakte auswählen | `2 Fenster offen` |
 | Eigene Apps | optional | frei als YAML-Liste |
 
@@ -50,6 +51,8 @@ Diese Entitäten brauchst du später. Trag ein, was du hast, der Rest bleibt lee
 - [ ] Außentemperatur: `sensor.____________________`
 - [ ] PV-Leistung: `sensor.____________________`
 - [ ] Wärmepumpe: `sensor.____________________`
+- [ ] Speicher-Ladestand (%): `sensor.____________________`
+- [ ] Speicher-Leistung (W oder kW): `sensor.____________________`
 - [ ] Fenster-Kontakte: `binary_sensor.____________________`
 - [ ] Anwesenheitssensor: `binary_sensor.____________________`
 - [ ] Stromschalter der Matrix: `switch.____________________`
@@ -95,7 +98,7 @@ rest_command:
 
 Klicke auf den Blueprint → **Automation erstellen**.
 
-Du siehst elf Abschnitte, aber nur zwei sind aufgeklappt: **Grundeinstellungen** und **App – Uhrzeit**. Das sind die sechs Felder, die du wirklich brauchst. Alles andere ist optional und klappst du nur auf, wenn du es einrichten willst.
+Du siehst zwölf Abschnitte, aber nur zwei sind aufgeklappt: **Grundeinstellungen** und **App – Uhrzeit**. Das sind die sechs Felder, die du wirklich brauchst. Alles andere ist optional und klappst du nur auf, wenn du es einrichten willst.
 
 **Grundeinstellungen**
 - [ ] **WLED-Matrix:** deine Matrix auswählen.
@@ -112,6 +115,10 @@ Du siehst elf Abschnitte, aber nur zwei sind aufgeklappt: **Grundeinstellungen**
 - [ ] **PV-Leistung:** Sensor auswählen. Die beiden **Schwellen** legen fest, ab wann die mittlere und die hohe Farbe gelten — pass sie an deine Anlagengröße an.
 - [ ] **Wärmepumpe:** Sensor auswählen. Vier Farbstufen mit drei Schwellen: Bereitschaft, normaler Betrieb, hohe Last und Heizstab.
   - Liefert dein Sensor den Verbrauch als **negative Zahl**, schalte **Vorzeichen umkehren** ein.
+- [ ] **PV-Speicher:** Sensor mit dem Ladestand in Prozent auswählen. Fünf Farbstufen mit vier Schwellen: fast leer, niedrig, mittel, hoch und voll (Standard 20, 40, 60 und 80 %).
+  - Wählst du zusätzlich die **Lade-/Entladeleistung** aus, erscheint hinter dem Ladestand ein Richtungszeichen: `^` beim Laden, `v` beim Entladen. Unterhalb der **Ruhe-Schwelle** (Standard 50 W) bleibt es weg.
+  - Zeigt beim Laden `v`, schalte **Vorzeichen umkehren** ein. Der Blueprint erwartet beim Laden eine positive Zahl, viele Wechselrichter und das Energie-Dashboard zählen andersherum.
+  - Echte Pfeile wie `↑` und `↓` gehen mit den eingebauten Schriften nicht, siehe „Gut zu wissen“. Die Zeichen sind aber einstellbar, ebenso die **Beschriftung** vor dem Ladestand: Mit `Akku` statt `Speicher bei` passt der Text eher ohne Scrollen.
 - [ ] **Fenster-Kontakte:** alle Kontakte auswählen, die mitgezählt werden sollen.
 - [ ] *Optional:* **Eigene Apps** als Liste, zum Beispiel:
 
@@ -236,6 +243,18 @@ Was du dort einträgst, erscheint sofort auf der Matrix. Das Feld wird danach au
 
 **Umlaute:** Die eingebauten Schriften können Umlaute teils nicht darstellen. Schreib `ae`, `oe`, `ue` und `ss`.
 
+**Sonderzeichen und Pfeile:** Die eingebauten WLED-Schriften enthalten nur die einfachen ASCII-Zeichen. Pfeile wie `↑` oder `↓` verschwinden bei WLED 0.14 und 0.15 ersatzlos, WLED 16 zeigt stattdessen ein `?`. Deshalb nimmt die Speicher-App `^` und `v`. Ob deine Matrix mehr kann, probierst du direkt aus, ohne den Blueprint: Entwicklerwerkzeuge → **Aktionen**, IP anpassen.
+
+```yaml
+action: rest_command.wled_matrix_json
+data:
+  host: 192.168.1.50
+  data: >-
+    {"on":true,"bri":128,"seg":[{"id":0,"fx":122,"n":"57% ↑↓ ^v +-","c2":128,"sx":128}]}
+```
+
+Erscheinen die Pfeile, trag sie in der Speicher-App unter **Zeichen für Laden** und **Zeichen für Entladen** ein.
+
 **Lauftext startet neu:** Jeder App-Wechsel und jede Nachricht startet den Text von vorn. Ist „App-Wechsel alle“ zu kurz für einen langen Text, wird er abgeschnitten. Dann das Intervall erhöhen oder den Text kürzen.
 
 **Stromtrennung:**
@@ -257,6 +276,8 @@ Was die Automation gemacht hat, siehst du unter Automation → drei Punkte → *
 | Trace endet sofort an einer Bedingung | Prüfe der Reihe nach: Matrix an, Zeitfenster „Aktiv ab/bis“, Anwesenheitssensor, mindestens eine aktive App. |
 | Immer nur die Uhr | Alle anderen Apps sind ausgeblendet: kein Sensor ausgewählt, oder die Bedingung greift (kein PV-Ertrag, WP aus, Fenster zu). |
 | **Wärmepumpe erscheint nie** | Zwei häufige Gründe. **Erstens:** Sie läuft wirklich nicht — im Standby ziehen viele Anlagen nur 20 bis 50 W, das liegt unter der Schwelle von 100 W. Zum Prüfen „nur anzeigen, wenn sie läuft" kurz ausschalten. **Zweitens:** Das Vorzeichen passt nicht. Schau den Sensorwert unter Entwicklerwerkzeuge → Zustände an, während die Pumpe läuft: steht dort eine negative Zahl, muss „Vorzeichen umkehren" an sein, bei einer positiven aus. |
+| **Speicher-Pfeil zeigt falsch herum** | Das Vorzeichen passt nicht. Schau den Leistungssensor unter Entwicklerwerkzeuge → Zustände an, während der Speicher lädt: steht dort eine negative Zahl, muss „Vorzeichen umkehren" an sein. |
+| **Speicher ohne Pfeil** | Kein Leistungssensor ausgewählt, oder die Leistung liegt unter der Ruhe-Schwelle. Steht auf der Matrix ein `?` oder fehlt das Zeichen, kennt die Schrift es nicht, siehe „Sonderzeichen und Pfeile“. |
 | **PV erscheint tagsüber nicht** | Sensorwert prüfen. Manche Wechselrichter liefern kleine negative Werte, dann greift „nur anzeigen, wenn Ertrag vorhanden". |
 | IP wird nicht erkannt | IP im Abschnitt **Grundeinstellungen** von Hand eintragen. |
 | Anderer Effekt statt Lauftext | Die Effekt-ID stimmt nicht. Richtigen Wert über `http://IP/json/eff` ermitteln (Teil 2). Nicht über die Effektliste in Home Assistant, die ist anders sortiert. |

@@ -37,6 +37,12 @@ template:
       - name: Testwp
         state: "820"
         unit_of_measurement: "W"
+      - name: Testspeicher
+        state: "57"
+        unit_of_measurement: "%"
+      - name: Testspeicherleistung
+        state: "-1.2"
+        unit_of_measurement: "kW"
 
 light:
   - platform: template
