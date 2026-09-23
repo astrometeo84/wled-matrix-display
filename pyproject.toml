@@ -1,0 +1,29 @@
+# Dieses Projekt liefert keine Python-Bibliothek aus, sondern einen
+# Home-Assistant-Blueprint. Die pyproject.toml gibt es nur, damit uv die
+# Werkzeuge für Tests und Linting verwalten kann.
+
+[project]
+name = "wled-matrix-display"
+version = "1.0.0"
+description = "Home-Assistant-Blueprint für eine WLED-Matrix als Info-Anzeige"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+  "PyYAML>=6.0",
+  "Jinja2>=3.1",
+  "yamllint>=1.35",
+]
+
+[tool.uv]
+# Nichts zu bauen: Es gibt kein Paket, nur Tests und YAML-Dateien.
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-q --strict-markers"

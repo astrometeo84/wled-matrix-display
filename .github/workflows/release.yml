@@ -17,19 +17,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
-          python-version: "3.12"
+          enable-cache: true
 
       # Kein Release, wenn die Tests nicht durchlaufen
       - name: Tests
         run: |
-          python -m pip install -r requirements-dev.txt
-          python -m pytest -q
+          uv sync --locked
+          uv run pytest -q
 
       # Die Version im Blueprint muss zum Tag passen
       - name: Version prüfen
-        run: python3 scripts/check_version.py "${GITHUB_REF_NAME#v}"
+        run: uv run python scripts/check_version.py "${GITHUB_REF_NAME#v}"
 
       - name: Änderungen seit dem letzten Release sammeln
         id: changelog

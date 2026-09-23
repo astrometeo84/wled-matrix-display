@@ -2,47 +2,46 @@
 
 ## Tests lokal ausführen
 
-Einmalig eine virtuelle Umgebung anlegen und die Werkzeuge installieren.
-
-**Linux, macOS**
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements-dev.txt
-```
-
-**Windows, PowerShell**
-
-```powershell
-py -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements-dev.txt
-```
-
-Weigert sich PowerShell mit "Die Datei kann nicht geladen werden, da die
-Ausführung von Skripts auf diesem System deaktiviert ist", erlaubst du es
-für diese eine Sitzung:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-```
-
-Danach überall gleich:
+Das Projekt benutzt [uv](https://docs.astral.sh/uv/) für Python-Umgebung und
+Werkzeuge. Einmalig installieren:
 
 ```bash
-python -m pytest              # alle Tests
-python -m pytest -v           # mit Namen
-python -m pytest -k Schrift   # nur passende Tests
-python -m yamllint --strict . # YAML-Stil
+# Linux, macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows, PowerShell
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-Aufrufe über `python -m` statt direkt `pytest` sind Absicht: So läuft immer der
-Interpreter der aktiven Umgebung. Ein global installiertes `pytest` findet die
-Pakete aus `.venv` sonst nicht.
+Danach überall gleich, ohne virtuelle Umgebung von Hand anzulegen oder zu
+aktivieren:
 
-Vor der virtuellen Umgebung steht am Prompt `(.venv)`. Mit `deactivate`
-verlässt du sie wieder.
+```bash
+uv run pytest              # alle Tests
+uv run pytest -v           # mit Namen
+uv run pytest -k Schrift   # nur passende Tests
+uv run yamllint --strict . # YAML-Stil
+```
+
+`uv run` legt die Umgebung beim ersten Aufruf selbst an, installiert was fehlt
+und führt den Befehl darin aus. Unter Windows entfällt damit das Aktivieren
+über `Activate.ps1` samt der Execution-Policy-Hürde.
+
+### Abhängigkeiten ändern
+
+Sie stehen in der `pyproject.toml` unter `[dependency-groups] dev`. Nach einer
+Änderung die Sperrdatei neu erzeugen und mit einchecken:
+
+```bash
+uv lock
+```
+
+`uv.lock` hält die exakten Versionen fest, mit denen auch die CI arbeitet. Die
+Workflows laufen mit `--locked` und brechen ab, wenn Sperrdatei und
+`pyproject.toml` auseinanderlaufen. So kann ein frisch veröffentlichtes pytest
+die CI nicht unbemerkt rot färben.
+
+Aktualisieren geht mit `uv lock --upgrade`.
 
 ## Wie die Tests aufgebaut sind
 
@@ -123,9 +122,10 @@ Ein Tag mit Bindestrich, etwa `v1.1.0-beta1`, wird automatisch als Vorabversion 
 ## Ein Release veröffentlichen
 
 ```bash
-# 1. Version im Blueprint anheben
-#    blueprints/automation/wled_matrix/wled_matrix_display.yaml
-#    Zeile:  # Version: 1.1.0
+# 1. Version an BEIDEN Stellen anheben
+#    blueprints/automation/wled_matrix/wled_matrix_display.yaml  ->  # Version: 1.1.0
+#    pyproject.toml                                              ->  version = "1.1.0"
+#    Ein Test prüft, dass beide übereinstimmen.
 
 # 2. CHANGELOG ergänzen
 
