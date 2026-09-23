@@ -2,16 +2,47 @@
 
 ## Tests lokal ausführen
 
+Einmalig eine virtuelle Umgebung anlegen und die Werkzeuge installieren.
+
+**Linux, macOS**
+
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-dev.txt
-
-pytest              # alle Tests
-pytest -v           # mit Namen
-pytest -k Effekt    # nur passende Tests
-yamllint --strict . # YAML-Stil
+python -m pip install -r requirements-dev.txt
 ```
+
+**Windows, PowerShell**
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-dev.txt
+```
+
+Weigert sich PowerShell mit "Die Datei kann nicht geladen werden, da die
+Ausführung von Skripts auf diesem System deaktiviert ist", erlaubst du es
+für diese eine Sitzung:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Danach überall gleich:
+
+```bash
+python -m pytest              # alle Tests
+python -m pytest -v           # mit Namen
+python -m pytest -k Schrift   # nur passende Tests
+python -m yamllint --strict . # YAML-Stil
+```
+
+Aufrufe über `python -m` statt direkt `pytest` sind Absicht: So läuft immer der
+Interpreter der aktiven Umgebung. Ein global installiertes `pytest` findet die
+Pakete aus `.venv` sonst nicht.
+
+Vor der virtuellen Umgebung steht am Prompt `(.venv)`. Mit `deactivate`
+verlässt du sie wieder.
 
 ## Wie die Tests aufgebaut sind
 
