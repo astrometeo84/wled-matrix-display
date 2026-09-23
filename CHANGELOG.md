@@ -3,6 +3,14 @@
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.0.2](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.1...v1.0.2) (2026-09-23)
+
+
+### Behoben
+
+* lock uv version in workflows and update changelog for consistency ([a9390cb](https://github.com/astrometeo84/wled-matrix-display/commit/a9390cb8b110db033827f602561405010ee06969))
+* release-please-action auf v5 (Node 24) anheben ([7aa7569](https://github.com/astrometeo84/wled-matrix-display/commit/7aa7569a66202aab4e78c86f0134091b587e3f81))
+
 ## [1.0.1](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.0...v1.0.1) (2026-09-23)
 
 
