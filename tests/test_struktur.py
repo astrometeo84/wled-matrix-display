@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import pytest
 
-from conftest import BLUEPRINT, all_inputs, find_input, input_names
+from conftest import BLUEPRINT, all_inputs, find_input, input_default, input_names
 
 SEKTIONEN = [
     "basis", "app_uhrzeit", "app_datum", "app_temperatur", "app_pv",
-    "app_waermepumpe", "app_fenster", "app_eigene",
+    "app_waermepumpe", "app_speicher", "app_fenster", "app_eigene",
     "darstellung", "nachrichten", "anwesenheit",
 ]
 # Nur diese Abschnitte sind beim Öffnen aufgeklappt.
@@ -45,7 +45,7 @@ def test_sektionen_vollstaendig(blueprint):
 
 
 def test_nur_pflichtabschnitte_sind_aufgeklappt(blueprint):
-    """Beim Öffnen soll man nicht von 53 Feldern erschlagen werden.
+    """Beim Öffnen soll man nicht von 70 Feldern erschlagen werden.
 
     Aufgeklappt sind nur die Grundeinstellungen und die Uhrzeit – zusammen
     sechs Felder. Alles andere ist optional und wird bei Bedarf ausgeklappt.
@@ -202,7 +202,7 @@ def test_schriften_konsistent(blueprint, variables):
 
 @pytest.mark.parametrize(
     "feld",
-    ["time_font", "date_font", "temp_font", "pv_font", "hp_font", "window_font"],
+    ["time_font", "date_font", "temp_font", "pv_font", "hp_font", "bat_font", "window_font"],
 )
 def test_schriftauswahl_pro_app(blueprint, variables, feld):
     """Pro App: dieselben Schriften plus "" für "wie eingestellt"."""
@@ -315,9 +315,26 @@ def test_stolperfallen_sind_erklaert(blueprint):
         ("hp_only_when_running", "ERSCHEINT DIE APP NICHT"),
         ("hp_sensor", "erscheint die App nicht"),
         ("pv_only_when_producing", "negative"),
+        ("bat_invert", "NEGATIVE"),
+        ("bat_arrow_up", "ASCII"),
+        ("bat_arrow_down", "ASCII"),
     ]:
         beschreibung = find_input(blueprint, name).get("description", "")
         assert stichwort in beschreibung, f"{name}: Hinweis auf '{stichwort}' fehlt"
+
+
+@pytest.mark.parametrize("feld", ["bat_arrow_up", "bat_arrow_down", "bat_label"])
+def test_speichertexte_passen_in_die_wled_schriften(blueprint, feld):
+    """Die eingebauten WLED-Schriften kennen nur ASCII 32 bis 126.
+
+    Ein echter Pfeil wie "↑" verschwindet bei WLED 0.14 und 0.15 ersatzlos,
+    WLED 16 zeigt stattdessen "?". Beides sieht aus wie ein Fehler des
+    Blueprints. Der Standard muss deshalb ohne solche Zeichen auskommen;
+    wer eine Schrift mit Pfeilen hat, trägt sie selbst ein.
+    """
+    wert = input_default(blueprint, feld)
+    fremd = [z for z in wert if not 32 <= ord(z) <= 126]
+    assert not fremd, f"{feld}: {fremd} fehlt in den eingebauten WLED-Schriften"
 
 
 def test_version_steht_nur_im_blueprint():

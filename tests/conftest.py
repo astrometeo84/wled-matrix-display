@@ -153,7 +153,7 @@ def branches(blueprint: dict) -> dict:
 
 @pytest.fixture
 def hass() -> FakeHass:
-    """Standardhaushalt: PV in kW, Wärmepumpe in W, zwei von drei Fenstern offen."""
+    """Standardhaushalt: PV in kW, Wärmepumpe in W, Speicher lädt, zwei von drei Fenstern offen."""
     effects = ["Solid"] + ["RSVD"] * 120 + ["Blends", "Scrolling Text", "Image Effect"]
     return (
         FakeHass()
@@ -161,6 +161,8 @@ def hass() -> FakeHass:
         .set("sensor.aussentemperatur", "7.34", unit_of_measurement="°C")
         .set("sensor.pv", "3.2", unit_of_measurement="kW")
         .set("sensor.wp", "820", unit_of_measurement="W")
+        .set("sensor.speicher", "57.4", unit_of_measurement="%")
+        .set("sensor.speicher_leistung", "1.2", unit_of_measurement="kW")
         .set("binary_sensor.fenster_1", "on")
         .set("binary_sensor.fenster_2", "off")
         .set("binary_sensor.fenster_3", "on")
@@ -231,6 +233,25 @@ def config(blueprint, variables) -> dict:
         "hp_c_low": [0, 255, 80],
         "hp_c_mid": [255, 200, 0],
         "hp_c_high": [255, 60, 0],
+        # Speicher: Schwellen, Farben, Pfeile und Beschriftung kommen aus den
+        # Standardwerten des Blueprints, damit die Tests genau die ausgelieferte
+        # Einstellung prüfen.
+        "bat_sensor": "sensor.speicher",
+        "bat_power_sensor": "sensor.speicher_leistung",
+        "bat_invert": False,
+        "bat_label": input_default(blueprint, "bat_label"),
+        "bat_up": input_default(blueprint, "bat_arrow_up"),
+        "bat_down": input_default(blueprint, "bat_arrow_down"),
+        "bat_t_idle": input_default(blueprint, "bat_threshold_idle"),
+        "bat_t_low": input_default(blueprint, "bat_threshold_low"),
+        "bat_t_mid": input_default(blueprint, "bat_threshold_mid"),
+        "bat_t_high": input_default(blueprint, "bat_threshold_high"),
+        "bat_t_full": input_default(blueprint, "bat_threshold_full"),
+        "bat_c_empty": input_default(blueprint, "bat_color_empty"),
+        "bat_c_low": input_default(blueprint, "bat_color_low"),
+        "bat_c_mid": input_default(blueprint, "bat_color_mid"),
+        "bat_c_high": input_default(blueprint, "bat_color_high"),
+        "bat_c_full": input_default(blueprint, "bat_color_full"),
         "window_sensors": [
             "binary_sensor.fenster_1",
             "binary_sensor.fenster_2",
@@ -245,6 +266,7 @@ def config(blueprint, variables) -> dict:
         "temp_font": "",
         "pv_font": "",
         "hp_font": "",
+        "bat_font": "",
         "window_font": "",
         "def_font": "6x8",
         "def_speed": 128,
@@ -262,6 +284,7 @@ def build_apps(variables, hass, config):
         cfg = {**config, **overrides}
         cfg["pv_w"] = render(variables["pv_w"], hass, **cfg)
         cfg["hp_w"] = render(variables["hp_w"], hass, **cfg)
+        cfg["bat_w"] = render(variables["bat_w"], hass, **cfg)
         cfg["windows_open"] = render(variables["windows_open"], hass, **cfg)
         return render(variables["apps"], hass, **cfg), cfg
 
