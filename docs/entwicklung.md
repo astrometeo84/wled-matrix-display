@@ -43,6 +43,27 @@ die CI nicht unbemerkt rot färben.
 
 Aktualisieren geht mit `uv lock --upgrade`.
 
+## Im echten Home Assistant ausprobieren
+
+Die Tests prüfen die Logik, nicht die Matrix. Vor dem Commit lohnt sich ein
+Lauf an echter Hardware. `scripts/ha_deploy.py` spielt den Blueprint so, wie
+er gerade im Arbeitsverzeichnis liegt, in Home Assistant, lässt die
+Konfiguration prüfen und lädt die Automationen neu:
+
+```bash
+cp .ha.env.example .ha.env   # einmalig, dann ausfüllen
+uv run scripts/ha_deploy.py --trocken
+uv run scripts/ha_deploy.py
+```
+
+Kopiert wird über die Samba-Freigabe oder per `scp` über das SSH-Add-on. Für
+Prüfung und Neuladen braucht das Skript einen langlebigen Zugriffstoken
+(Profil → Sicherheit). `.ha.env` steht in `.gitignore`.
+
+Für Claude liegen unter `.claude/skills/` zwei Anleitungen: `neue-app` listet
+alle Stellen, die eine neue App berührt, `ha-testen` den Ablauf oben. Die
+`CLAUDE.md` im Wurzelverzeichnis fasst die Regeln des Projekts zusammen.
+
 ## Wie die Tests aufgebaut sind
 
 Die Tests lesen die Jinja-Vorlagen **direkt aus der Blueprint-Datei** statt Kopien davon zu prüfen. Änderst du den Blueprint, prüfen die Tests automatisch die neue Fassung. Dafür baut `tests/conftest.py` die Template-Umgebung von Home Assistant so weit nach, wie der Blueprint sie braucht: die Funktionen `states`, `state_attr`, `is_state`, `device_attr`, die Filter `bool` und `regex_replace`, und die Umwandlung des Ergebnisses in echte Python-Typen.
@@ -52,6 +73,7 @@ Die Tests lesen die Jinja-Vorlagen **direkt aus der Blueprint-Datei** statt Kopi
 | `tests/test_struktur.py` | Aufbau: Abschnitte, Eingaben, Selektoren, Trigger, Zweige |
 | `tests/test_vorlagen.py` | Logik: IP-Erkennung, Einheiten, App-Liste, Rotation, Speicher |
 | `tests/test_befehle.py` | Die JSON-Befehle, die tatsächlich an WLED gehen, samt Effekt-ID |
+| `tests/test_deploy.py` | Das Hilfsskript `scripts/ha_deploy.py` |
 
 Ein paar Tests sind bewusst streng, weil sie Fehler abfangen, die im Betrieb schwer zu finden sind:
 
