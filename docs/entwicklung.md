@@ -43,6 +43,27 @@ die CI nicht unbemerkt rot färben.
 
 Aktualisieren geht mit `uv lock --upgrade`.
 
+## Im echten Home Assistant ausprobieren
+
+Die Tests prüfen die Logik, nicht die Matrix. Vor dem Commit lohnt sich ein
+Lauf an echter Hardware. `scripts/ha_deploy.py` spielt den Blueprint so, wie
+er gerade im Arbeitsverzeichnis liegt, in Home Assistant, lässt die
+Konfiguration prüfen und lädt die Automationen neu:
+
+```bash
+cp .ha.env.example .ha.env   # einmalig, dann ausfüllen
+uv run scripts/ha_deploy.py --trocken
+uv run scripts/ha_deploy.py
+```
+
+Kopiert wird über die Samba-Freigabe oder per `scp` über das SSH-Add-on. Für
+Prüfung und Neuladen braucht das Skript einen langlebigen Zugriffstoken
+(Profil → Sicherheit). `.ha.env` steht in `.gitignore`.
+
+Für Claude liegen unter `.claude/skills/` zwei Anleitungen: `neue-app` listet
+alle Stellen, die eine neue App berührt, `ha-testen` den Ablauf oben. Die
+`CLAUDE.md` im Wurzelverzeichnis fasst die Regeln des Projekts zusammen.
+
 ## Wie die Tests aufgebaut sind
 
 Die Tests lesen die Jinja-Vorlagen **direkt aus der Blueprint-Datei** statt Kopien davon zu prüfen. Änderst du den Blueprint, prüfen die Tests automatisch die neue Fassung. Dafür baut `tests/conftest.py` die Template-Umgebung von Home Assistant so weit nach, wie der Blueprint sie braucht: die Funktionen `states`, `state_attr`, `is_state`, `device_attr`, die Filter `bool` und `regex_replace`, und die Umwandlung des Ergebnisses in echte Python-Typen.
@@ -50,8 +71,9 @@ Die Tests lesen die Jinja-Vorlagen **direkt aus der Blueprint-Datei** statt Kopi
 | Datei | Prüft |
 |---|---|
 | `tests/test_struktur.py` | Aufbau: Abschnitte, Eingaben, Selektoren, Trigger, Zweige |
-| `tests/test_vorlagen.py` | Logik: IP-Erkennung, Einheiten, App-Liste, Rotation |
+| `tests/test_vorlagen.py` | Logik: IP-Erkennung, Einheiten, App-Liste, Rotation, Speicher |
 | `tests/test_befehle.py` | Die JSON-Befehle, die tatsächlich an WLED gehen, samt Effekt-ID |
+| `tests/test_deploy.py` | Das Hilfsskript `scripts/ha_deploy.py` |
 
 Ein paar Tests sind bewusst streng, weil sie Fehler abfangen, die im Betrieb schwer zu finden sind:
 
@@ -59,6 +81,7 @@ Ein paar Tests sind bewusst streng, weil sie Fehler abfangen, die im Betrieb sch
 - **Nur die Matrix ist Pflicht.** Alle anderen Felder brauchen einen Standardwert, sonst blockiert die Einrichtung.
 - **Der Stromschalter darf keine Lampe sein.** Sonst könnte man versehentlich die Matrix selbst als ihren eigenen Stromschalter wählen.
 - **Die Rotation schaltet die Matrix nie ein.** Eine von Hand ausgeschaltete Matrix soll ausgeschaltet bleiben.
+- **Die Standardzeichen des Speichers sind ASCII.** Die eingebauten WLED-Schriften kennen nur ASCII 32 bis 126. Ein `↑` als Standard wäre bei WLED 0.14/0.15 unsichtbar und bei WLED 16 ein `?`.
 - **Die Schriftwerte sind festgenagelt.** `0 / 64 / 128` sind durch WLED vorgegeben; verschieben sie sich, zeigt die Matrix eine andere Schrift als ausgewählt.
 
 ### Doppelte Wahrheiten vermeiden
@@ -67,7 +90,7 @@ Werte, die im Blueprint stehen, werden in den Tests **nicht noch einmal hingesch
 
 ### Taugen die Tests etwas?
 
-Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und schaut, ob die Tests anschlagen. Diese zwanzig Änderungen werden erkannt:
+Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und schaut, ob die Tests anschlagen. Diese sechsundzwanzig Änderungen werden erkannt:
 
 | Eingebauter Fehler | Wird erkannt |
 |---|---|
@@ -88,6 +111,12 @@ Prüfen lässt sich das, indem man den Blueprint absichtlich kaputt macht und sc
 | Betrag bei der Einheitenwahl entfernt | ✅ |
 | Schwelle der Farbskala exklusiv statt inklusiv | ✅ |
 | Bereitschafts-Schwelle der Wärmepumpe ignoriert | ✅ |
+| Lade- und Entladezeichen des Speichers vertauscht | ✅ |
+| Vorzeichenumkehr des Speichers wirkungslos | ✅ |
+| Ruhe-Schwelle des Speichers ignoriert oder ohne Betrag | ✅ |
+| Speicher-Schwelle exklusiv statt inklusiv | ✅ |
+| Speicher ohne Wert (`unavailable`) wird trotzdem angezeigt | ✅ |
+| Unicode-Pfeil als Standardzeichen des Speichers | ✅ |
 | Version wieder in der `pyproject.toml` gepflegt | ✅ |
 | `pyproject.toml` wieder in `extra-files` eingetragen | ✅ |
 | `uv.lock` und `pyproject.toml` mit verschiedenen Versionen | ✅ |

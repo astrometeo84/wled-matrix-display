@@ -81,6 +81,7 @@ class TestApps:
             "7.3C",
             "PV 3.2 kW",
             "WP 820 W",
+            "Speicher bei 57% ^",
             "2 Fenster offen",
         ]
 
@@ -94,7 +95,8 @@ class TestApps:
 
     def test_nur_uhr_wenn_nichts_konfiguriert(self, build_apps):
         apps, _ = build_apps(
-            show_date=False, temp_sensor="", pv_sensor="", hp_sensor="", window_sensors=[]
+            show_date=False, temp_sensor="", pv_sensor="", hp_sensor="", bat_sensor="",
+            window_sensors=[],
         )
         assert [a["text"] for a in apps] == ["#TIME"]
 
@@ -219,6 +221,17 @@ class TestApps:
 # ==========================================================================
 # Rotation
 # ==========================================================================
+def _durchlaufbeginn(anzahl: int, sekunden: int = 15) -> int:
+    """Ein Zeitstempel, zu dem die Rotation bei der ersten App steht.
+
+    Ein fester Zeitstempel passt nur zu einer bestimmten Anzahl Apps. Kommt
+    eine App dazu, verschiebt sich der Startpunkt, und die Tests schlügen fehl,
+    obwohl die Rotation stimmt.
+    """
+    durchlauf = anzahl * sekunden
+    return (1758470400 // durchlauf) * durchlauf
+
+
 class TestRotation:
     @pytest.mark.parametrize("pattern,sekunden", [("/10", 10), ("/15", 15), ("/30", 30), ("0", 60)])
     def test_intervall_umrechnung(self, hass, pattern, sekunden):
@@ -228,8 +241,9 @@ class TestRotation:
     def test_reihenfolge_ist_stabil_und_vollstaendig(self, build_apps, hass):
         apps, _ = build_apps()
         vorlage = "{{ apps[ ((ts | int) // (secs | int)) % (apps | count) ].text }}"
+        start = _durchlaufbeginn(len(apps))
         gesehen = [
-            render(vorlage, hass, apps=apps, ts=1758470400 + i * 15, secs=15)
+            render(vorlage, hass, apps=apps, ts=start + i * 15, secs=15)
             for i in range(len(apps))
         ]
         assert gesehen == [a["text"] for a in apps]
@@ -238,8 +252,9 @@ class TestRotation:
         """Nach einem vollen Durchlauf beginnt es wieder bei der ersten App."""
         apps, _ = build_apps()
         vorlage = "{{ ((ts | int) // 15) % (apps | count) }}"
-        start = render(vorlage, hass, apps=apps, ts=1758470400)
-        rum = render(vorlage, hass, apps=apps, ts=1758470400 + 15 * len(apps))
+        beginn = _durchlaufbeginn(len(apps))
+        start = render(vorlage, hass, apps=apps, ts=beginn)
+        rum = render(vorlage, hass, apps=apps, ts=beginn + 15 * len(apps))
         assert start == rum == 0
 
 
@@ -278,6 +293,7 @@ class TestSchriftProApp:
             ("temp_font", "7.3C"),
             ("pv_font", "PV 3.2 kW"),
             ("hp_font", "WP 820 W"),
+            ("bat_font", "Speicher bei 57% ^"),
             ("window_font", "2 Fenster offen"),
         ],
     )
@@ -342,6 +358,190 @@ class TestWaermepumpe:
     def test_bereitschaft_wird_ausgeblendet(self, variables, config):
         hass = FakeHass().set("sensor.wp", "40", unit_of_measurement="W")
         assert self._apps(variables, config, hass, hp_only=True) == []
+
+
+# ==========================================================================
+# PV-Speicher: Ladestand, fünf Farbstufen, Pfeil für Laden und Entladen
+# ==========================================================================
+class TestSpeicher:
+    def _hass(self, soc="57.4", leistung="1200", einheit="W"):
+        return (
+            FakeHass()
+            .set("sensor.speicher", soc, unit_of_measurement="%")
+            .set("sensor.speicher_leistung", leistung, unit_of_measurement=einheit)
+        )
+
+    def _apps(self, variables, config, hass, **over):
+        """Nur die Speicher-App, alle anderen abgeschaltet."""
+        cfg = {**config, "show_time": False, "show_date": False, "temp_sensor": "",
+               "pv_sensor": "", "hp_sensor": "", "window_sensors": [], "pv_w": 0,
+               "hp_w": 0, "windows_open": 0, **over}
+        cfg["bat_w"] = render(variables["bat_w"], hass, **cfg)
+        return render(variables["apps"], hass, **cfg)
+
+    def _app(self, variables, config, hass, **over):
+        apps = self._apps(variables, config, hass, **over)
+        assert len(apps) == 1, f"erwartet genau die Speicher-App, bekommen: {apps}"
+        return apps[0]
+
+    # --- Leistung ---------------------------------------------------
+    @pytest.mark.parametrize(
+        "wert,einheit,erwartet",
+        [("1200", "W", 1200.0), ("1.2", "kW", 1200.0), ("-0.8", "kW", -800.0),
+         ("unavailable", "W", 0.0)],
+    )
+    def test_leistung_in_watt(self, variables, config, wert, einheit, erwartet):
+        hass = self._hass(leistung=wert, einheit=einheit)
+        assert render(variables["bat_w"], hass, **config) == pytest.approx(erwartet)
+
+    def test_ohne_leistungssensor_null(self, variables, config):
+        cfg = {**config, "bat_power_sensor": ""}
+        assert render(variables["bat_w"], self._hass(), **cfg) == 0
+
+    @pytest.mark.parametrize("wert,erwartet", [("-1200", 1200.0), ("1200", -1200.0)])
+    def test_vorzeichen_umkehren(self, variables, config, wert, erwartet):
+        cfg = {**config, "bat_invert": True}
+        hass = self._hass(leistung=wert)
+        assert render(variables["bat_w"], hass, **cfg) == pytest.approx(erwartet)
+
+    # --- Text und Pfeil ---------------------------------------------
+    def test_laden_pfeil_nach_oben(self, variables, config):
+        app = self._app(variables, config, self._hass(leistung="1200"))
+        assert app["text"] == "Speicher bei 57% " + config["bat_up"]
+
+    def test_entladen_pfeil_nach_unten(self, variables, config):
+        app = self._app(variables, config, self._hass(leistung="-450"))
+        assert app["text"] == "Speicher bei 57% " + config["bat_down"]
+
+    def test_pfeile_sind_verschieden(self, config):
+        """Sonst ließe sich Laden nicht von Entladen unterscheiden."""
+        assert config["bat_up"] != config["bat_down"]
+
+    def test_umgekehrter_sensor_zeigt_richtig(self, variables, config):
+        """Der Praxisfall: Sensor meldet Laden als negative Zahl."""
+        hass = self._hass(leistung="-1200")
+        app = self._app(variables, config, hass, bat_invert=True)
+        assert app["text"].endswith(config["bat_up"])
+
+    @pytest.mark.parametrize("watt", ["0", "49", "-49"])
+    def test_ruhe_ohne_pfeil(self, variables, config, watt):
+        """Kleine Regelschwankungen sollen den Pfeil nicht flackern lassen."""
+        app = self._app(variables, config, self._hass(leistung=watt))
+        assert app["text"] == "Speicher bei 57%"
+
+    @pytest.mark.parametrize("watt,richtung", [("50", "bat_up"), ("-50", "bat_down")])
+    def test_ruheschwelle_ist_inklusiv(self, variables, config, watt, richtung):
+        app = self._app(variables, config, self._hass(leistung=watt))
+        assert app["text"].endswith(" " + config[richtung])
+
+    def test_eigene_ruheschwelle(self, variables, config):
+        hass = self._hass(leistung="300")
+        assert self._app(variables, config, hass, bat_t_idle=500)["text"] == "Speicher bei 57%"
+
+    def test_ruheschwelle_null_zeigt_bei_null_keinen_pfeil(self, variables, config):
+        app = self._app(variables, config, self._hass(leistung="0"), bat_t_idle=0)
+        assert app["text"] == "Speicher bei 57%"
+
+    def test_ohne_leistungssensor_kein_pfeil(self, variables, config):
+        app = self._app(variables, config, self._hass(), bat_power_sensor="")
+        assert app["text"] == "Speicher bei 57%"
+
+    @pytest.mark.parametrize("zustand", ["unknown", "unavailable"])
+    def test_leistung_ohne_wert_kein_pfeil(self, variables, config, zustand):
+        """Fällt nur der Leistungssensor aus, bleibt der Ladestand sichtbar."""
+        app = self._app(variables, config, self._hass(leistung=zustand))
+        assert app["text"] == "Speicher bei 57%"
+
+    @pytest.mark.parametrize("soc,text", [("57.4", "57%"), ("57.6", "58%"), ("100", "100%"),
+                                          ("0", "0%")])
+    def test_ladestand_ganzzahlig(self, variables, config, soc, text):
+        app = self._app(variables, config, self._hass(soc=soc), bat_power_sensor="")
+        assert app["text"] == "Speicher bei " + text
+
+    @pytest.mark.parametrize(
+        "beschriftung,erwartet",
+        [("Akku", "Akku 57% ^"), ("", "57% ^"), ("  Speicher  ", "Speicher 57% ^")],
+    )
+    def test_beschriftung_frei_waehlbar(self, variables, config, beschriftung, erwartet):
+        app = self._app(variables, config, self._hass(), bat_label=beschriftung,
+                        bat_up="^")
+        assert app["text"] == erwartet
+
+    def test_eigene_pfeilzeichen(self, variables, config):
+        """Wer eine Schrift mit echten Pfeilen hat, kann sie eintragen."""
+        laden = self._app(variables, config, self._hass(leistung="900"), bat_up="↑")
+        entladen = self._app(variables, config, self._hass(leistung="-900"), bat_down="↓")
+        assert laden["text"].endswith("↑") and entladen["text"].endswith("↓")
+
+    def test_leeres_pfeilzeichen_hinterlaesst_kein_leerzeichen(self, variables, config):
+        app = self._app(variables, config, self._hass(), bat_up="")
+        assert app["text"] == "Speicher bei 57%"
+
+    # --- Sichtbarkeit -----------------------------------------------
+    @pytest.mark.parametrize("zustand", ["unknown", "unavailable"])
+    def test_ohne_ladestand_ausgeblendet(self, variables, config, zustand):
+        assert self._apps(variables, config, self._hass(soc=zustand)) == []
+
+    def test_ohne_sensor_keine_app(self, variables, config):
+        assert self._apps(variables, config, self._hass(), bat_sensor="") == []
+
+    def test_leerer_speicher_bleibt_sichtbar(self, variables, config):
+        """0 % ist eine Aussage, kein fehlender Wert."""
+        app = self._app(variables, config, self._hass(soc="0", leistung="0"))
+        assert app["text"] == "Speicher bei 0%"
+
+    # --- Farbstufen -------------------------------------------------
+    @pytest.mark.parametrize(
+        "soc,stufe",
+        [
+            ("5", "bat_c_empty"),
+            ("19.9", "bat_c_empty"),
+            ("20", "bat_c_low"),
+            ("39", "bat_c_low"),
+            ("40", "bat_c_mid"),
+            ("59", "bat_c_mid"),
+            ("60", "bat_c_high"),
+            ("79", "bat_c_high"),
+            ("80", "bat_c_full"),
+            ("100", "bat_c_full"),
+        ],
+    )
+    def test_fuenf_farbstufen(self, variables, config, soc, stufe):
+        app = self._app(variables, config, self._hass(soc=soc))
+        assert app["color"] == config[stufe]
+
+    def test_standardfarben_sind_verschieden(self, config):
+        farben = [tuple(config[k]) for k in
+                  ("bat_c_empty", "bat_c_low", "bat_c_mid", "bat_c_high", "bat_c_full")]
+        assert len(set(farben)) == 5
+
+    def test_standardschwellen_steigen(self, config):
+        schwellen = [config[k] for k in ("bat_t_low", "bat_t_mid", "bat_t_high", "bat_t_full")]
+        assert schwellen == sorted(schwellen) and len(set(schwellen)) == 4
+
+    @pytest.mark.parametrize("schwelle", ["bat_t_low", "bat_t_mid", "bat_t_high", "bat_t_full"])
+    def test_schwelle_gehoert_zur_oberen_stufe(self, variables, config, schwelle):
+        """Genau auf der Schwelle gilt bereits die neue Farbe."""
+        wert = config[schwelle]
+        oben = self._app(variables, config, self._hass(soc=str(wert)))["color"]
+        unten = self._app(variables, config, self._hass(soc=str(wert - 0.1)))["color"]
+        assert oben != unten
+
+    def test_eigene_schwellen_wirken(self, variables, config):
+        app = self._app(variables, config, self._hass(soc="50"), bat_t_high=45)
+        assert app["color"] == config["bat_c_high"], "50 % liegt über der neuen Schwelle 45"
+
+    def test_farbe_haengt_nicht_an_der_leistung(self, variables, config):
+        laden = self._app(variables, config, self._hass(soc="30", leistung="2000"))
+        entladen = self._app(variables, config, self._hass(soc="30", leistung="-2000"))
+        assert laden["color"] == entladen["color"] == config["bat_c_low"]
+
+    def test_reihenfolge_nach_waermepumpe_vor_fenstern(self, build_apps):
+        apps, _ = build_apps()
+        texte = [a["text"] for a in apps]
+        speicher = next(i for i, t in enumerate(texte) if t.startswith("Speicher"))
+        assert texte[speicher - 1].startswith("WP")
+        assert "Fenster" in texte[speicher + 1]
 
 
 # ==========================================================================

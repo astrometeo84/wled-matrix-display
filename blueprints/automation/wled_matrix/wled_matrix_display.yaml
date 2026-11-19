@@ -13,7 +13,7 @@ blueprint:
 
     Enthalten:
     • APPS: Uhrzeit (Pflicht) und optional Datum, Außentemperatur, PV-Leistung,
-      Wärmepumpen-Verbrauch und Anzahl offener Fenster. Jede App wird aktiv, sobald
+      Wärmepumpen-Verbrauch, Ladestand des PV-Speichers und Anzahl offener Fenster. Jede App wird aktiv, sobald
       die passende Entität ausgewählt ist. Dazu beliebige eigene Apps als YAML-Liste.
     • NACHRICHTEN: Benachrichtigungen unterbrechen die Rotation und danach läuft sie weiter.
       Ausgelöst über das Event "wled_matrix_notify" oder ein Text-Eingabefeld.
@@ -365,6 +365,150 @@ blueprint:
                   value: "6x8"
 
     # ------------------------------------------------------------------
+    app_speicher:
+      name: "App – PV-Speicher (optional)"
+      icon: mdi:home-battery-outline
+      collapsed: true
+      input:
+        bat_sensor:
+          name: Ladestand des Speichers (optional)
+          description: >
+            Sensor mit dem Ladestand in Prozent. Leer lassen, um die App zu
+            deaktivieren. Solange der Sensor keinen Wert liefert (unknown,
+            unavailable), wird die App ausgeblendet.
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        bat_power_sensor:
+          name: Lade-/Entladeleistung (optional)
+          description: >
+            Sensor mit der aktuellen Leistung des Speichers. Daraus entsteht der
+            Pfeil: nach oben beim Laden, nach unten beim Entladen. W und kW
+            werden automatisch erkannt. Leer lassen, dann erscheint nur der
+            Ladestand ohne Pfeil. Zeigt der Pfeil in die falsche Richtung,
+            siehe "Vorzeichen umkehren".
+          default: ""
+          selector:
+            entity:
+              filter:
+                - domain: sensor
+        bat_invert:
+          name: Vorzeichen umkehren
+          description: >
+            Der Blueprint erwartet beim Laden eine positive und beim Entladen
+            eine negative Zahl. Viele Wechselrichter zählen andersherum, auch
+            das Energie-Dashboard von Home Assistant erwartet es umgekehrt.
+            So findest du es heraus: Entwicklerwerkzeuge → Zustände, den Sensor
+            suchen und den Wert anschauen, während der Speicher lädt. Steht dort
+            eine NEGATIVE Zahl, schalte das hier ein. Sonst zeigt der Pfeil beim
+            Laden nach unten.
+          default: false
+          selector:
+            boolean:
+        bat_threshold_idle:
+          name: Speicher-Schwelle Ruhe
+          description: >
+            Liegt die Leistung in beide Richtungen darunter, gilt der Speicher als
+            ruhend und es erscheint kein Pfeil. So springt der Pfeil nicht bei
+            kleinen Regelschwankungen um einige Watt hin und her.
+          default: 50
+          selector:
+            number: {min: 0, max: 50000, step: 10, unit_of_measurement: W, mode: box}
+        bat_label:
+          name: Beschriftung Speicher
+          description: >
+            Steht vor dem Ladestand und ergibt "Speicher bei 57% ^". Ein kurzes
+            Wort wie "Akku" passt eher ohne Scrollen auf 64 Pixel. Leer lassen
+            für den nackten Ladestand.
+          default: "Speicher bei"
+          selector:
+            text:
+        bat_arrow_up:
+          name: Zeichen für Laden
+          description: >
+            Die eingebauten WLED-Schriften kennen nur einfache ASCII-Zeichen und
+            damit keine Pfeile wie ↑ oder ↓. WLED 0.14 und 0.15 lassen solche
+            Zeichen ersatzlos weg, WLED 16 zeigt stattdessen ein Fragezeichen.
+            Deshalb steht hier "^". Hat deine Matrix eine Schrift mit Pfeilen,
+            kannst du "↑" eintragen. Andere Möglichkeit: "+".
+          default: "^"
+          selector:
+            text:
+        bat_arrow_down:
+          name: Zeichen für Entladen
+          description: >
+            Gegenstück zu "Zeichen für Laden", ebenfalls nur ASCII. Das kleine
+            "v" sitzt in den WLED-Schriften unten und bildet mit "^" ein Paar.
+            Mit Pfeil-Schrift "↓", andere Möglichkeit: "-".
+          default: "v"
+          selector:
+            text:
+        bat_threshold_low:
+          name: Speicher-Schwelle niedrig
+          description: Darunter gilt der Speicher als fast leer.
+          default: 20
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: box}
+        bat_threshold_mid:
+          name: Speicher-Schwelle mittel
+          default: 40
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: box}
+        bat_threshold_high:
+          name: Speicher-Schwelle hoch
+          default: 60
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: box}
+        bat_threshold_full:
+          name: Speicher-Schwelle voll
+          default: 80
+          selector:
+            number: {min: 0, max: 100, step: 1, unit_of_measurement: "%", mode: box}
+        bat_color_empty:
+          name: Speicher-Farbe fast leer
+          default: [255, 0, 0]
+          selector:
+            color_rgb:
+        bat_color_low:
+          name: Speicher-Farbe niedrig
+          default: [255, 100, 0]
+          selector:
+            color_rgb:
+        bat_color_mid:
+          name: Speicher-Farbe mittel
+          default: [255, 200, 0]
+          selector:
+            color_rgb:
+        bat_color_high:
+          name: Speicher-Farbe hoch
+          default: [150, 255, 0]
+          selector:
+            color_rgb:
+        bat_color_full:
+          name: Speicher-Farbe voll
+          default: [0, 255, 0]
+          selector:
+            color_rgb:
+        bat_font:
+          name: Schrift PV-Speicher
+          description: >
+            "wie eingestellt" nimmt die Schrift aus dem Abschnitt Darstellung.
+          default: ""
+          selector:
+            select:
+              options:
+                - label: wie eingestellt
+                  value: ""
+                - label: 4x6 – klein, ca. 16 Zeichen (Regler 0)
+                  value: "4x6"
+                - label: 5x8 – mittel, ca. 12 Zeichen (Regler 64)
+                  value: "5x8"
+                - label: 6x8 – groß, ca. 10 Zeichen (Regler 128)
+                  value: "6x8"
+
+    # ------------------------------------------------------------------
     app_fenster:
       name: "App – Offene Fenster (optional)"
       icon: mdi:window-open-variant
@@ -663,6 +807,22 @@ variables:
   hp_c_low: !input hp_color_low
   hp_c_mid: !input hp_color_mid
   hp_c_high: !input hp_color_high
+  bat_sensor: !input bat_sensor
+  bat_power_sensor: !input bat_power_sensor
+  bat_invert: !input bat_invert
+  bat_label: !input bat_label
+  bat_up: !input bat_arrow_up
+  bat_down: !input bat_arrow_down
+  bat_t_idle: !input bat_threshold_idle
+  bat_t_low: !input bat_threshold_low
+  bat_t_mid: !input bat_threshold_mid
+  bat_t_high: !input bat_threshold_high
+  bat_t_full: !input bat_threshold_full
+  bat_c_empty: !input bat_color_empty
+  bat_c_low: !input bat_color_low
+  bat_c_mid: !input bat_color_mid
+  bat_c_high: !input bat_color_high
+  bat_c_full: !input bat_color_full
   window_sensors: !input window_sensors
   window_only: !input window_only_when_open
   window_color: !input window_color
@@ -675,6 +835,7 @@ variables:
   temp_font: !input temp_font
   pv_font: !input pv_font
   hp_font: !input hp_font
+  bat_font: !input bat_font
   window_font: !input window_font
   def_speed: !input speed
   def_bri: !input brightness
@@ -727,6 +888,16 @@ variables:
       {% set u = state_attr(hp_sensor, 'unit_of_measurement') | string | lower %}
       {% set w = (v * 1000) if 'kw' in u else v %}
       {{ (w * -1) if hp_invert else w }}
+    {% endif %}
+  # Speicherleistung in Watt: positiv = Laden, negativ = Entladen. Das
+  # Vorzeichen bestimmt nur die Pfeilrichtung, deshalb wird es hier einmal
+  # gedreht statt an jeder Stelle, die es liest.
+  bat_w: >
+    {% if bat_power_sensor == '' %}0{% else %}
+      {% set v = states(bat_power_sensor) | float(0) %}
+      {% set u = state_attr(bat_power_sensor, 'unit_of_measurement') | string | lower %}
+      {% set w = (v * 1000) if 'kw' in u else v %}
+      {{ (w * -1) if bat_invert else w }}
     {% endif %}
   windows_open: >
     {{ window_sensors | select('is_state', 'on') | list | count }}
@@ -781,6 +952,28 @@ variables:
                  else (hp_c_mid if w >= (hp_t_mid | float(800))
                  else (hp_c_low if w >= (hp_t_idle | float(100)) else hp_c_idle))},
         **({'font': hp_font} if hp_font else {}))] %}
+    {% endif %}
+
+    {# Speicher: Ladestand in fuenf Farbstufen, dazu ein Zeichen fuer die
+       Richtung. Die Zeichen sind einstellbar, weil die eingebauten WLED-
+       Schriften nur ASCII 32-126 kennen: ein echter Pfeil wie "↑" fiele bei
+       0.14/0.15 ersatzlos weg und wuerde bei 16 zum "?". Innerhalb der
+       Ruheschwelle gibt es keinen Pfeil, sonst flackert er bei kleinen
+       Regelschwankungen. Leere Teile fallen samt Leerzeichen weg. #}
+    {% if bat_sensor != '' and states(bat_sensor) not in ['unknown', 'unavailable'] %}
+      {% set soc = states(bat_sensor) | float(0) %}
+      {% set w = bat_w | float(0) %}
+      {% set aktiv = bat_power_sensor != '' and w != 0
+                     and w | abs >= (bat_t_idle | float(50)) %}
+      {% set pfeil = ((bat_up if w > 0 else bat_down) if aktiv else '') | string | trim %}
+      {% set ns.l = ns.l + [dict({
+        'text': [bat_label | string | trim, (soc | round(0) | int | string) + '%', pfeil]
+                | reject('eq', '') | join(' '),
+        'color': bat_c_full if soc >= (bat_t_full | float(80))
+                 else (bat_c_high if soc >= (bat_t_high | float(60))
+                 else (bat_c_mid if soc >= (bat_t_mid | float(40))
+                 else (bat_c_low if soc >= (bat_t_low | float(20)) else bat_c_empty)))},
+        **({'font': bat_font} if bat_font else {}))] %}
     {% endif %}
 
     {% if window_sensors | count > 0 and (not window_only or windows_open | int > 0) %}

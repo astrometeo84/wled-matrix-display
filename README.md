@@ -21,10 +21,11 @@ Ein Blueprint, der aus einer WLED-Matrix eine Info-Anzeige macht — Apps im Wec
 | Außentemperatur | Sensor | `7.3C` |
 | PV-Leistung | Sensor | `PV 3.2kW`, Farbe nach Höhe |
 | Wärmepumpe | Sensor | `WP 820W` |
+| PV-Speicher | Sensor, optional Leistung | `Speicher bei 57% ^`, fünf Farbstufen |
 | Offene Fenster | Fensterkontakte | `2 Fenster offen` |
 | Eigene Apps | — | frei als YAML-Liste |
 
-Jede App blendet sich selbst aus, wenn sie nichts zu melden hat: kein PV-Ertrag nachts, Wärmepumpe steht, alle Fenster zu. Die Einheit der Leistungssensoren (W oder kW) wird automatisch erkannt. Die Effekt-ID des Lauftext-Effekts ist fest auf 122 voreingestellt und lässt sich im Blueprint ändern, siehe [Anleitung, Teil 2](docs/anleitung.md#teil-2--effekt-id-herausfinden).
+Jede App blendet sich selbst aus, wenn sie nichts zu melden hat: kein PV-Ertrag nachts, Wärmepumpe steht, alle Fenster zu. Die Einheit der Leistungssensoren (W oder kW) wird automatisch erkannt. Beim Speicher zeigt ein Zeichen hinter dem Ladestand, ob er gerade lädt (`^`) oder entlädt (`v`). Die Effekt-ID des Lauftext-Effekts ist fest auf 122 voreingestellt und lässt sich im Blueprint ändern, siehe [Anleitung, Teil 2](docs/anleitung.md#teil-2--effekt-id-herausfinden).
 
 **Benachrichtigungen** unterbrechen die Rotation und danach läuft sie weiter. Ausgelöst über ein Event aus beliebigen Automationen oder über ein Texteingabefeld auf dem Dashboard.
 

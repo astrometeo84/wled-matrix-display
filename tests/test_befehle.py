@@ -100,7 +100,8 @@ class TestText:
         )
         assert out["seg"][0]["n"] == "Hallo"
 
-    @pytest.mark.parametrize("text", ["#TIME", "#DATE", "PV 3.2kW", "2 Fenster offen"])
+    @pytest.mark.parametrize("text", ["#TIME", "#DATE", "PV 3.2kW", "Speicher bei 57% ^", "Speicher 5% v",
+                                      "2 Fenster offen"])
     def test_texte_bleiben_unveraendert(self, rotation_payload, hass, defaults, text):
         out = render(rotation_payload, hass, item={"text": text}, fx_id=122, **defaults)
         assert out["seg"][0]["n"] == text

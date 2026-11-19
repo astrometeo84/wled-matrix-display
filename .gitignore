@@ -6,3 +6,5 @@ venv/
 # uv.lock gehoert bewusst ins Repo - nicht ignorieren
 ha/
 .DS_Store
+# Zugangsdaten für scripts/ha_deploy.py - enthält den HA-Token
+.ha.env

@@ -50,6 +50,23 @@
       hp_color_mid: [255, 200, 0]
       hp_color_high: [255, 60, 0]
       hp_font: ""
+      bat_sensor: sensor.testspeicher
+      bat_power_sensor: sensor.testspeicherleistung
+      bat_invert: false
+      bat_threshold_idle: 50
+      bat_label: "Speicher bei"
+      bat_arrow_up: "^"
+      bat_arrow_down: "v"
+      bat_threshold_low: 20
+      bat_threshold_mid: 40
+      bat_threshold_high: 60
+      bat_threshold_full: 80
+      bat_color_empty: [255, 0, 0]
+      bat_color_low: [255, 100, 0]
+      bat_color_mid: [255, 200, 0]
+      bat_color_high: [150, 255, 0]
+      bat_color_full: [0, 255, 0]
+      bat_font: "5x8"
       window_sensors:
         - binary_sensor.testfenster
       window_only_when_open: true
