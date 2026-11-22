@@ -3,6 +3,13 @@
 Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 Versionierung nach [Semantic Versioning](https://semver.org/lang/de/).
 
+## [1.1.0](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.3...v1.1.0) (2026-11-19)
+
+
+### Hinzugefügt
+
+* PV-Speicher-App zeigt Ladestand mit Lade-/Entladezeichen ([#8](https://github.com/astrometeo84/wled-matrix-display/issues/8)) ([21aee19](https://github.com/astrometeo84/wled-matrix-display/commit/21aee19107efeef90c5a5ea475af2c18e17b98d9))
+
 ## [1.0.3](https://github.com/astrometeo84/wled-matrix-display/compare/v1.0.2...v1.0.3) (2026-09-23)
 
 
